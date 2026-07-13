@@ -856,7 +856,7 @@ async def stream_rag_response(req: StreamRAGRequest):
     )
 
 
-@doc_router.post("/cold-start-demo")
+@documents_router.post("/cold-start-demo")
 async def cold_start_demo():
     """
     Demo endpoint: clear in-memory FAISS, reload from Infinia, return timing.
