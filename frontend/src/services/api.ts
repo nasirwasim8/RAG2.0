@@ -21,6 +21,15 @@ export interface ConversationMessage {
   content: string
 }
 
+export interface InfiniaEvent {
+  id: number
+  type: 'READ' | 'WRITE'
+  key: string
+  bytes: number
+  latency_ms: number
+  ts: string  // e.g. "14:01:44.821"
+}
+
 export interface QueryRequest {
   query: string
   model?: string
@@ -413,6 +422,42 @@ export const api = {
         }
       })()
 
+    return ctrl
+  },
+
+  // ── Live Infinia Activity Feed (SSE) ────────────────────────────────────────
+  subscribeToInfiniaFeed: (
+    lastId: number = 0,
+    onEvent: (event: InfiniaEvent) => void,
+  ): AbortController => {
+    const ctrl = new AbortController()
+    ;(async () => {
+      try {
+        const res = await fetch(`/api/infinia/feed?last_id=${lastId}`, { signal: ctrl.signal })
+        if (!res.ok || !res.body) return
+        const reader = res.body.getReader()
+        const dec = new TextDecoder()
+        let buf = ''
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+          buf += dec.decode(value, { stream: true })
+          const parts = buf.split('\n\n')
+          buf = parts.pop() ?? ''
+          for (const part of parts) {
+            const dataLine = part.split('\n').find(l => l.startsWith('data:'))
+            if (!dataLine) continue  // keep-alive comments (': ka') are skipped
+            try {
+              const event = JSON.parse(dataLine.slice(5).trim()) as InfiniaEvent
+              onEvent(event)
+            } catch { /* ignore malformed */ }
+          }
+        }
+      } catch (e: unknown) {
+        if (e instanceof Error && e.name !== 'AbortError')
+          console.warn('Infinia feed disconnected:', e.message)
+      }
+    })()
     return ctrl
   },
 }

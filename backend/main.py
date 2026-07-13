@@ -13,7 +13,8 @@ from app.api.routes import (
     metrics_router,
     ingestion_router,
     benchmarks_router,
-    health_router
+    health_router,
+    infinia_router,
 )
 
 # Create FastAPI app
@@ -35,13 +36,14 @@ app.add_middleware(
 )
 
 # Include routers
-app.include_router(health_router, prefix="/api")
-app.include_router(config_router, prefix="/api")
-app.include_router(documents_router, prefix="/api")
-app.include_router(rag_router, prefix="/api")
-app.include_router(metrics_router, prefix="/api")
-app.include_router(ingestion_router, prefix="/api")
+app.include_router(health_router,     prefix="/api")
+app.include_router(config_router,     prefix="/api")
+app.include_router(documents_router,  prefix="/api")
+app.include_router(rag_router,        prefix="/api")
+app.include_router(metrics_router,    prefix="/api")
+app.include_router(ingestion_router,  prefix="/api")
 app.include_router(benchmarks_router, prefix="/api")
+app.include_router(infinia_router,    prefix="/api")  # → /api/infinia/feed
 
 
 @app.get("/")

@@ -93,13 +93,14 @@ def _rebuild_registry_from_faiss() -> None:
 _rebuild_registry_from_faiss()
 
 
-config_router = APIRouter(prefix="/config", tags=["Configuration"])
-documents_router = APIRouter(prefix="/documents", tags=["Documents"])
-rag_router = APIRouter(prefix="/rag", tags=["RAG"])
-metrics_router = APIRouter(prefix="/metrics", tags=["Metrics"])
-ingestion_router = APIRouter(prefix="/ingestion", tags=["Continuous Ingestion"])
-benchmarks_router = APIRouter(prefix="/benchmarks", tags=["Benchmarks"])
-health_router = APIRouter(tags=["Health"])
+config_router     = APIRouter(prefix="/config",     tags=["Configuration"])
+documents_router  = APIRouter(prefix="/documents",  tags=["Documents"])
+rag_router        = APIRouter(prefix="/rag",         tags=["RAG"])
+metrics_router    = APIRouter(prefix="/metrics",     tags=["Metrics"])
+ingestion_router  = APIRouter(prefix="/ingestion",   tags=["Continuous Ingestion"])
+benchmarks_router = APIRouter(prefix="/benchmarks",  tags=["Benchmarks"])
+infinia_router    = APIRouter(prefix="/infinia",     tags=["Infinia Feed"])
+health_router     = APIRouter(tags=["Health"])
 
 
 # ============== Configuration Routes ==============
@@ -896,7 +897,45 @@ async def cold_start_demo():
     }
 
 
-# ============== Metrics Routes ==============
+# ============== Infinia Live Feed ==============
+
+@infinia_router.get("/feed")
+async def infinia_activity_feed(last_id: int = 0):
+    """
+    SSE stream of live DDN Infinia I/O operations.
+
+    Polls the storage event ring-buffer every 100ms and emits any new events
+    since last_id as SSE data frames. The frontend subscribes during a RAG
+    query to display the floating activity overlay.
+
+    Event shape: {id, type, key, bytes, latency_ms, ts}
+    """
+    import json as _json
+    from app.services.storage import _infinia_events, _event_lock
+
+    async def _generate():
+        seen_id = last_id
+        while True:
+            with _event_lock:
+                new_events = [e for e in _infinia_events if e["id"] > seen_id]
+
+            if new_events:
+                for event in new_events:
+                    seen_id = event["id"]
+                    yield f"data: {_json.dumps(event)}\n\n"
+            else:
+                # SSE keep-alive comment (no data — keeps connection open)
+                yield ": ka\n\n"
+
+            await asyncio.sleep(0.1)  # poll every 100 ms
+
+    return StreamingResponse(
+        _generate(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "Connection": "keep-alive", "X-Accel-Buffering": "no"},
+    )
+
+
 
 @metrics_router.get("/", response_model=MetricsResponse)
 async def get_metrics():

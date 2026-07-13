@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Send, Loader2, Zap, Shield, ChevronDown, Clock, Trash2, Info, Database, FileText } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { api, getAvailableModels, getHealth, QueryResponse, ConversationMessage } from '../services/api'
+import { api, getAvailableModels, getHealth, QueryResponse, ConversationMessage, InfiniaEvent } from '../services/api'
 import toast from 'react-hot-toast'
 
 // Persist state to localStorage
@@ -61,6 +61,13 @@ export default function ChatPage() {
   // ── Cold-start demo state ────────────────────────────────────────────────────
   const [isColdStartLoading, setIsColdStartLoading] = useState(false)
   const [coldStartResult, setColdStartResult] = useState<{ chunks_restored: number; load_time_s: number } | null>(null)
+
+  // ── Live Infinia Activity Feed ────────────────────────────────────────────────
+  const [infiniaFeedEvents, setInfiniaFeedEvents] = useState<InfiniaEvent[]>([])
+  const [showFeed, setShowFeed] = useState(false)
+  const feedAbortRef = useRef<AbortController | null>(null)
+  const feedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const feedScrollRef = useRef<HTMLDivElement | null>(null)
 
   // Persist state changes
   useEffect(() => {
@@ -179,12 +186,28 @@ export default function ChatPage() {
     refetchInterval: 15_000,
   })
 
+  // Auto-scroll the feed events list whenever new events arrive
+  useEffect(() => {
+    if (feedScrollRef.current) {
+      feedScrollRef.current.scrollTop = feedScrollRef.current.scrollHeight
+    }
+  }, [infiniaFeedEvents])
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!query.trim() || isStreaming) return
 
     // Cancel any in-flight stream
     if (abortRef.current) abortRef.current.abort()
+
+    // Start Live Infinia Activity Feed
+    if (feedAbortRef.current) feedAbortRef.current.abort()
+    if (feedTimeoutRef.current) clearTimeout(feedTimeoutRef.current)
+    setInfiniaFeedEvents([])
+    setShowFeed(true)
+    feedAbortRef.current = api.subscribeToInfiniaFeed(0, (event) => {
+      setInfiniaFeedEvents(prev => [...prev, event].slice(-20))
+    })
 
     // Reset streaming state
     setIsStreaming(true)
@@ -264,10 +287,17 @@ export default function ChatPage() {
           { role: 'user' as const, content: query },
           { role: 'assistant' as const, content: assistantText }
         ].slice(-6))
+        // Close feed after 5 seconds so user can read the results
+        feedTimeoutRef.current = setTimeout(() => {
+          feedAbortRef.current?.abort()
+          setShowFeed(false)
+        }, 5000)
       },
       // onError
       (message) => {
         setIsStreaming(false)
+        feedAbortRef.current?.abort()
+        setShowFeed(false)
         toast.error(message)
       },
       conversationMemory,  // pass rolling memory as 8th argument
@@ -941,6 +971,106 @@ function ChatHistory({ history, onSelectQuery }: { history: ChatHistoryEntry[], 
                   </p>
                 </div>
               ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Live Infinia Activity Feed Overlay (fixed, slides in from right) ── */}
+      <AnimatePresence>
+        {showFeed && (
+          <motion.div
+            initial={{ opacity: 0, x: 60 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 60 }}
+            transition={{ duration: 0.3, ease: 'easeOut' }}
+            className="fixed right-5 top-1/2 -translate-y-1/2 w-80 z-50"
+          >
+            <div className="bg-gray-950/95 backdrop-blur-xl border border-emerald-500/40 rounded-2xl shadow-2xl overflow-hidden">
+              {/* Header */}
+              <div className="flex items-center gap-2 px-4 py-3 border-b border-emerald-500/20 bg-emerald-950/50">
+                <div className="relative flex items-center justify-center w-3 h-3">
+                  <div className="w-2 h-2 rounded-full bg-emerald-400 animate-ping absolute opacity-60" />
+                  <div className="w-2 h-2 rounded-full bg-emerald-400 relative" />
+                </div>
+                <span className="text-emerald-300 text-xs font-bold tracking-widest uppercase ml-1">Infinia Activity</span>
+                <div className="ml-auto flex items-center gap-2">
+                  <span className="text-gray-500 text-xs font-mono tabular-nums">{infiniaFeedEvents.length} ops</span>
+                  <button
+                    onClick={() => { setShowFeed(false); feedAbortRef.current?.abort() }}
+                    className="text-gray-600 hover:text-gray-300 text-lg leading-none transition-colors"
+                    aria-label="Close"
+                  >×</button>
+                </div>
+              </div>
+
+              {/* Events scroll area */}
+              <div ref={feedScrollRef} className="h-60 overflow-y-auto p-2 space-y-0.5 bg-gray-950/60">
+                {infiniaFeedEvents.length === 0 ? (
+                  <div className="flex items-center gap-2 px-3 py-5 text-gray-500 text-xs">
+                    <Loader2 className="w-3 h-3 animate-spin text-emerald-500 shrink-0" />
+                    <span>Waiting for Infinia operations…</span>
+                  </div>
+                ) : (
+                  infiniaFeedEvents.map((event) => (
+                    <motion.div
+                      key={event.id}
+                      initial={{ opacity: 0, y: 4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.12 }}
+                      className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-mono ${
+                        event.type === 'READ'
+                          ? 'bg-blue-500/10 border border-blue-500/15'
+                          : 'bg-emerald-500/10 border border-emerald-500/15'
+                      }`}
+                    >
+                      <span className="text-sm shrink-0">
+                        {event.type === 'READ' ? '📖' : '✍️'}
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <div className={`truncate ${
+                          event.type === 'READ' ? 'text-blue-300' : 'text-emerald-300'
+                        }`}>
+                          {event.key.split('/').pop() ?? event.key}
+                        </div>
+                        <div className="text-gray-600 text-[10px]">
+                          {(event.bytes / 1024).toFixed(1)} KB · {event.ts}
+                        </div>
+                      </div>
+                      <span className={`shrink-0 font-bold tabular-nums ${
+                        event.latency_ms < 20 ? 'text-emerald-400' :
+                        event.latency_ms < 60 ? 'text-yellow-400' : 'text-red-400'
+                      }`}>
+                        {event.latency_ms}ms
+                      </span>
+                    </motion.div>
+                  ))
+                )}
+              </div>
+
+              {/* Summary footer */}
+              {infiniaFeedEvents.length > 0 && (() => {
+                const totalKB  = infiniaFeedEvents.reduce((s, e) => s + e.bytes, 0) / 1024
+                const avgLat   = infiniaFeedEvents.reduce((s, e) => s + e.latency_ms, 0) / infiniaFeedEvents.length
+                const reads    = infiniaFeedEvents.filter(e => e.type === 'READ').length
+                const writes   = infiniaFeedEvents.filter(e => e.type === 'WRITE').length
+                return (
+                  <div className="border-t border-emerald-500/20 bg-gray-950/80 px-4 py-2.5 grid grid-cols-3 gap-2 text-center">
+                    <div>
+                      <div className="text-white font-bold text-sm font-mono">{infiniaFeedEvents.length}</div>
+                      <div className="text-gray-500 text-[10px]">{reads}R / {writes}W</div>
+                    </div>
+                    <div>
+                      <div className="text-white font-bold text-sm font-mono">{totalKB.toFixed(1)}</div>
+                      <div className="text-gray-500 text-[10px]">KB total</div>
+                    </div>
+                    <div>
+                      <div className="text-emerald-400 font-bold text-sm font-mono">{avgLat.toFixed(1)}ms</div>
+                      <div className="text-gray-500 text-[10px]">avg latency</div>
+                    </div>
+                  </div>
+                )
+              })()}
             </div>
           </motion.div>
         )}

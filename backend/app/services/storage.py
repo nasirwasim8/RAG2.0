@@ -3,6 +3,10 @@ Storage service for AWS S3 and DDN INFINIA.
 Handles all object storage operations with both providers.
 """
 import io
+import time
+import threading
+from collections import deque
+from datetime import datetime
 import boto3
 from botocore.config import Config
 from botocore.exceptions import ClientError
@@ -13,6 +17,31 @@ from app.core.config import storage_config
 
 # Disable SSL warnings for DDN INFINIA (self-signed certs)
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+# ── Live Infinia Activity Feed ───────────────────────────────────────────
+# Thread-safe ring buffer of I/O events consumed by the SSE /api/infinia/feed endpoint.
+_infinia_events: deque = deque(maxlen=500)
+_event_id = 0
+_event_lock = threading.Lock()
+
+
+def _emit_event(provider: str, op_type: str, key: str, bytes_count: int, latency_ms: float) -> None:
+    """Push a DDN Infinia I/O event into the live feed buffer.
+    Silently ignored for non-Infinia providers.
+    """
+    global _event_id
+    if provider != 'ddn_infinia':
+        return
+    with _event_lock:
+        _event_id += 1
+        _infinia_events.append({
+            "id": _event_id,
+            "type": op_type,        # "READ" or "WRITE"
+            "key": key,
+            "bytes": bytes_count,
+            "latency_ms": round(latency_ms, 1),
+            "ts": datetime.now().strftime("%H:%M:%S.%f")[:-3],
+        })
 
 
 class S3Handler:
@@ -133,11 +162,14 @@ class S3Handler:
 
         try:
             bucket_name = self.config['bucket_name']
+            _t = time.perf_counter()
             self.client.put_object(
                 Bucket=bucket_name,
                 Key=object_key,
                 Body=data_bytes
             )
+            _latency_ms = (time.perf_counter() - _t) * 1000
+            _emit_event(self.config_type, "WRITE", object_key, len(data_bytes), _latency_ms)
             return True, f"Successfully uploaded to {self.config['provider']}"
         except Exception as e:
             return False, f"Upload error: {e}"
@@ -150,8 +182,12 @@ class S3Handler:
 
         try:
             bucket_name = self.config['bucket_name']
+            _t = time.perf_counter()
             response = self.client.get_object(Bucket=bucket_name, Key=object_key)
-            return response['Body'].read(), f"Successfully downloaded from {self.config['provider']}"
+            data = response['Body'].read()
+            _latency_ms = (time.perf_counter() - _t) * 1000
+            _emit_event(self.config_type, "READ", object_key, len(data), _latency_ms)
+            return data, f"Successfully downloaded from {self.config['provider']}"
         except Exception as e:
             return None, f"Download error: {e}"
 
