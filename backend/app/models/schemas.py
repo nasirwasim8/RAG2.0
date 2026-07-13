@@ -75,6 +75,23 @@ class QueryRequest(BaseModel):
     use_guardrails: bool = True
 
 
+class ConversationMessage(BaseModel):
+    """A single message in a multi-turn conversation."""
+    role: str = Field(..., description="'user' or 'assistant'")
+    content: str
+
+
+class StreamRAGRequest(BaseModel):
+    """Request body for POST /api/rag/stream — supports multi-turn conversation memory."""
+    query: str
+    model: str = "nvidia/nvidia-nemotron-nano-9b-v2"
+    top_k: int = Field(default=5, ge=1, le=20)
+    conversation_history: List[ConversationMessage] = Field(
+        default_factory=list,
+        description="Rolling window of previous exchanges (last 3 exchanges = 6 messages max)"
+    )
+
+
 class RetrievedChunk(BaseModel):
     content: str
     distance: float

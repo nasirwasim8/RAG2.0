@@ -23,7 +23,8 @@ from app.models.schemas import (
     RetrievedChunk,
     MetricsResponse,
     HealthResponse,
-    ErrorResponse
+    ErrorResponse,
+    StreamRAGRequest,
 )
 from app.services.storage import S3Handler
 from app.services.vector_store import VectorStore
@@ -718,10 +719,11 @@ async def get_available_models():
     return {"models": nvidia_llm.available_models()}
 
 
-@rag_router.get("/stream")
-async def stream_rag_response(query: str, model: str = "nvidia/nvidia-nemotron-nano-9b-v2", top_k: int = 5):
+@rag_router.post("/stream")
+async def stream_rag_response(req: StreamRAGRequest):
     """
-    Stream RAG response token-by-token via SSE.
+    Stream RAG response token-by-token via SSE (POST).
+    Accepts conversation_history for multi-turn memory.
 
     SSE event types:
       start  → {"ttfb_ms": float, "aws_ttfb_ms": float, "chunks_found": int}
@@ -729,6 +731,11 @@ async def stream_rag_response(query: str, model: str = "nvidia/nvidia-nemotron-n
       done   → {"total_tokens": int, "elapsed_ms": float, "tps": float}
       error  → {"message": str}
     """
+    query = req.query
+    model = req.model
+    top_k = req.top_k
+    conversation_history = req.conversation_history  # list of ConversationMessage
+
     async def _generate():
         import queue as _queue
         import threading
@@ -749,7 +756,6 @@ async def stream_rag_response(query: str, model: str = "nvidia/nvidia-nemotron-n
             ddn_ttfb = search_results.get("storage_ttfb", {}).get("ddn_infinia", 0)
             aws_ttfb = search_results.get("storage_ttfb", {}).get("aws", 0)
             chunks_found = len(search_results["results"])
-            # Include full chunk data so the frontend can render the similarity panel
             chunk_list = [
                 {
                     "content": r["content"],
@@ -759,7 +765,6 @@ async def stream_rag_response(query: str, model: str = "nvidia/nvidia-nemotron-n
                 }
                 for r in search_results["results"]
             ]
-            # Also include provider_times for the full performance comparison block
             provider_times = search_results.get("provider_times", {})
             fastest_provider = search_results.get("fastest_provider", "ddn_infinia")
             ttfb_improvement = search_results.get("ttfb_improvement", {})
@@ -774,13 +779,28 @@ async def stream_rag_response(query: str, model: str = "nvidia/nvidia-nemotron-n
             }
             yield f'event: start\ndata: {_json.dumps(start_payload)}\n\n'
 
-            # 3. Build context
+            # 3. Build conversation-aware LLM messages
             documents = [r["content"] for r in search_results["results"]]
             context = "\n\n---\n\n".join(documents[:top_k])
             messages = [
-                {"role": "system", "content": "You are a helpful assistant. Answer questions based on the provided context. If the context doesn't contain relevant information, say so."},
-                {"role": "user", "content": f"Context:\n{context}\n\nQuestion: {query}"}
+                {
+                    "role": "system",
+                    "content": (
+                        "You are a helpful AI assistant with access to a document knowledge base. "
+                        "Answer questions based on the provided context from the knowledge base. "
+                        "If the context doesn't contain enough information, say so. "
+                        "For follow-up questions, use the conversation history to maintain continuity."
+                    )
+                }
             ]
+            # Inject previous exchanges (last 3 exchanges = 6 messages)
+            for msg in conversation_history[-6:]:
+                messages.append({"role": msg.role, "content": msg.content})
+            # Add current question with RAG context
+            messages.append({
+                "role": "user",
+                "content": f"Context from knowledge base:\n{context}\n\nQuestion: {query}"
+            })
 
             # 4. Stream tokens via background thread → asyncio queue
             llm_start = time.perf_counter()
@@ -834,6 +854,47 @@ async def stream_rag_response(query: str, model: str = "nvidia/nvidia-nemotron-n
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "Connection": "keep-alive", "X-Accel-Buffering": "no"},
     )
+
+
+@doc_router.post("/cold-start-demo")
+async def cold_start_demo():
+    """
+    Demo endpoint: clear in-memory FAISS, reload from Infinia, return timing.
+
+    This demonstrates DDN Infinia's key value: even after a simulated restart
+    (clearing RAM), the full knowledge base reloads from Infinia S3 in
+    sub-second time — zero re-indexing, zero waiting.
+    """
+    chunks_before = vector_store.total_chunks
+    if chunks_before == 0:
+        raise HTTPException(
+            status_code=400,
+            detail="No chunks in memory. Please ingest documents first, then run the demo."
+        )
+
+    # Step 1: Simulate restart — clear in-memory index only
+    vector_store.clear_memory_only()
+
+    # Step 2: Time the reload from Infinia
+    import time as _time
+    start = _time.perf_counter()
+    loop = asyncio.get_event_loop()
+    success = await loop.run_in_executor(None, vector_store.load_index_from_infinia)
+    elapsed_ms = (_time.perf_counter() - start) * 1000
+
+    chunks_after = vector_store.total_chunks
+
+    # Rebuild document registry from restored FAISS metadata
+    _rebuild_registry_from_faiss()
+
+    return {
+        "success": success and chunks_after > 0,
+        "chunks_before": chunks_before,
+        "chunks_restored": chunks_after,
+        "load_time_ms": round(elapsed_ms, 1),
+        "load_time_s": round(elapsed_ms / 1000, 2),
+    }
+
 
 # ============== Metrics Routes ==============
 

@@ -16,6 +16,11 @@ export interface StorageConfig {
   endpoint_url?: string
 }
 
+export interface ConversationMessage {
+  role: 'user' | 'assistant'
+  content: string
+}
+
 export interface QueryRequest {
   query: string
   model?: string
@@ -218,6 +223,16 @@ export const api = {
     return response.data
   },
 
+  coldStartDemo: async (): Promise<{
+    success: boolean
+    chunks_before: number
+    chunks_restored: number
+    load_time_ms: number
+    load_time_s: number
+  }> => {
+    const response = await axiosInstance.post('/documents/cold-start-demo')
+    return response.data
+  },
 
   // RAG
   query: async (request: QueryRequest): Promise<QueryResponse> => {
@@ -316,7 +331,7 @@ export const api = {
     return response.data
   },
 
-  // ── Streaming RAG (SSE) ──────────────────────────────────────────────────────
+  // ── Streaming RAG (SSE via POST) ─────────────────────────────────────────────
   streamRAGQuery: (
     query: string,
     model: string,
@@ -333,14 +348,24 @@ export const api = {
     onToken: (token: string) => void,
     onDone: (totalTokens: number, elapsedMs: number, tps: number) => void,
     onError: (message: string) => void,
+    conversationHistory: ConversationMessage[] = [],
   ): AbortController => {
     const ctrl = new AbortController()
-    const params = new URLSearchParams({ query, model, top_k: String(topK) })
-    const url = `/api/rag/stream?${params.toString()}`
+    const url = `/api/rag/stream`
 
       ; (async () => {
         try {
-          const res = await fetch(url, { signal: ctrl.signal })
+          const res = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              query,
+              model,
+              top_k: topK,
+              conversation_history: conversationHistory,
+            }),
+            signal: ctrl.signal,
+          })
           if (!res.ok || !res.body) {
             onError(`HTTP ${res.status}`)
             return

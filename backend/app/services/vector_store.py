@@ -757,6 +757,26 @@ class VectorStore:
         self.chunk_metadata.clear()
         self.chunk_counter = 0
 
+    def clear_memory_only(self) -> int:
+        """Clear in-memory FAISS without touching Infinia files.
+
+        Used by Cold-Start Demo to simulate a server restart:
+        chunks are gone from RAM but still persisted on Infinia S3,
+        ready to be reloaded in sub-second time.
+
+        Returns the number of vectors that were cleared.
+        """
+        with self._add_lock:
+            chunks_cleared = self.index.ntotal
+            self.index = faiss.IndexFlatL2(self.embedding_dim)
+            self.chunk_metadata = {}
+            self.chunk_counter = 0
+            logger.info(
+                f"\U0001f9f9 In-memory FAISS cleared ({chunks_cleared} vectors) — "
+                f"Infinia files preserved and ready to reload"
+            )
+            return chunks_cleared
+
     @property
     def total_chunks(self) -> int:
         """Get total number of chunks in the index."""

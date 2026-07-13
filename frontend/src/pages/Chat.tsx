@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Send, Loader2, Zap, Shield, ChevronDown, Clock, Trash2, Info, Database, FileText } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { api, getAvailableModels, getHealth, QueryResponse } from '../services/api'
+import { api, getAvailableModels, getHealth, QueryResponse, ConversationMessage } from '../services/api'
 import toast from 'react-hot-toast'
 
 // Persist state to localStorage
@@ -52,6 +52,15 @@ export default function ChatPage() {
   const providerTimesRef = useRef<Record<string, unknown>>({})
   const fastestProviderRef = useRef<string>('ddn_infinia')
   const ttfbImprovementRef = useRef<Record<string, unknown>>({})
+
+  // ── Conversation memory (multi-turn context, session-only) ───────────────────
+  const [conversationMemory, setConversationMemory] = useState<ConversationMessage[]>([])
+  // Accumulates full streamed response text to add to conversation memory on done
+  const fullResponseRef = useRef<string>('')
+
+  // ── Cold-start demo state ────────────────────────────────────────────────────
+  const [isColdStartLoading, setIsColdStartLoading] = useState(false)
+  const [coldStartResult, setColdStartResult] = useState<{ chunks_restored: number; load_time_s: number } | null>(null)
 
   // Persist state changes
   useEffect(() => {
@@ -126,6 +135,33 @@ export default function ChatPage() {
     })
   }
 
+  // Clear conversation memory (multi-turn context) without clearing display history
+  const handleNewConversation = () => {
+    setConversationMemory([])
+    toast.success('New conversation started — memory cleared', {
+      icon: '🔄',
+      duration: 2000,
+    })
+  }
+
+  // Cold-start demo: clear RAM, reload from Infinia, show timing
+  const handleColdStart = async () => {
+    if (isColdStartLoading) return
+    setIsColdStartLoading(true)
+    setColdStartResult(null)
+    try {
+      const result = await api.coldStartDemo()
+      setColdStartResult({ chunks_restored: result.chunks_restored, load_time_s: result.load_time_s })
+      // Auto-dismiss after 10 seconds
+      setTimeout(() => setColdStartResult(null), 10_000)
+    } catch (err: unknown) {
+      const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail
+      toast.error(detail || 'Cold-start demo failed — ingest documents first')
+    } finally {
+      setIsColdStartLoading(false)
+    }
+  }
+
   const { data: modelsData } = useQuery({
     queryKey: ['models'],
     queryFn: () => getAvailableModels().then((res) => res.data),
@@ -160,6 +196,7 @@ export default function ChatPage() {
     setResponse(null)
     queryStartRef.current = Date.now()
     firstTokenRef.current = false
+    fullResponseRef.current = ''  // reset response accumulator for memory
 
     abortRef.current = api.streamRAGQuery(
       query,
@@ -184,6 +221,7 @@ export default function ChatPage() {
           setTtftMs(Date.now() - queryStartRef.current)
         }
         setStreamingText(prev => prev + token)
+        fullResponseRef.current += token  // accumulate for conversation memory
       },
       // onDone — read from refs (not state) to avoid stale closure
       (_totalTokens, elapsedMs, tps) => {
@@ -219,12 +257,20 @@ export default function ChatPage() {
         setChatHistory(prev => [newEntry, ...prev].slice(0, 5))
         // Persist
         localStorage.setItem('rag_chat_response', JSON.stringify(syntheticResponse))
+        // Update conversation memory (keep last 3 exchanges = 6 messages)
+        const assistantText = fullResponseRef.current
+        setConversationMemory(prev => [
+          ...prev,
+          { role: 'user' as const, content: query },
+          { role: 'assistant' as const, content: assistantText }
+        ].slice(-6))
       },
       // onError
       (message) => {
         setIsStreaming(false)
         toast.error(message)
       },
+      conversationMemory,  // pass rolling memory as 8th argument
     )
   }
 
@@ -269,12 +315,58 @@ export default function ChatPage() {
               )}
             </div>
           )}
-          <div className="ml-auto flex items-center gap-1 text-emerald-400">
-            <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-            <span>Live</span>
+          {/* Cold-start demo button + live indicator */}
+          <div className="ml-auto flex items-center gap-2">
+            <button
+              onClick={handleColdStart}
+              disabled={isColdStartLoading}
+              className="flex items-center gap-1 px-2.5 py-1 bg-emerald-700 hover:bg-emerald-800 disabled:opacity-50 text-white rounded-md text-xs font-semibold transition-colors shadow-sm"
+              title="Simulate a server restart: clears in-memory FAISS then reloads everything from Infinia"
+            >
+              {isColdStartLoading ? (
+                <><Loader2 className="w-3 h-3 animate-spin" /> Loading from Infinia...</>
+              ) : (
+                <><Zap className="w-3 h-3" /> Simulate Restart</>
+              )}
+            </button>
+            <div className="flex items-center gap-1 text-emerald-400">
+              <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span>Live</span>
+            </div>
           </div>
         </div>
       )}
+
+      {/* Cold-Start Demo Result Card */}
+      <AnimatePresence>
+        {coldStartResult && (
+          <motion.div
+            initial={{ opacity: 0, y: -8, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -8, scale: 0.98 }}
+            transition={{ duration: 0.25 }}
+            className="flex items-center gap-4 px-5 py-3.5 bg-gradient-to-r from-emerald-600 to-teal-600 rounded-xl text-white shadow-lg"
+          >
+            <div className="w-9 h-9 rounded-lg bg-white/20 flex items-center justify-center shrink-0">
+              <Zap className="w-4 h-4" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="font-bold text-sm">
+                <span className="font-black text-lg">{coldStartResult.chunks_restored.toLocaleString()}</span> chunks restored from Infinia in{' '}
+                <span className="font-black text-lg">{coldStartResult.load_time_s}s</span>
+              </div>
+              <div className="text-emerald-100 text-xs mt-0.5">
+                Zero re-indexing. DDN Infinia delivers instant knowledge base recovery after any restart.
+              </div>
+            </div>
+            <button
+              onClick={() => setColdStartResult(null)}
+              className="text-white/60 hover:text-white text-xl leading-none shrink-0"
+              aria-label="Dismiss"
+            >×</button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Query Input Card */}
       <div className="card-elevated p-5">
@@ -391,16 +483,31 @@ export default function ChatPage() {
           Nemotron 70B
         </span>
 
-        {/* Clear History Button */}
-        {(chatHistory.length > 0 || response) && (
-          <button
-            onClick={clearChatHistory}
-            className="flex items-center gap-2 px-3 py-1.5 text-xs text-neutral-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-            title="Clear all chat history and responses"
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-            Clear History
-          </button>
+        {/* Clear History + New Conversation buttons */}
+        {(chatHistory.length > 0 || response || conversationMemory.length > 0) && (
+          <div className="flex items-center gap-2">
+            {conversationMemory.length > 0 && (
+              <button
+                onClick={handleNewConversation}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors border border-blue-200"
+                title="Clear conversation memory and start fresh (keeps display history)"
+              >
+                <span>🔄</span>
+                <span>New Conversation</span>
+                <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded-full font-mono font-bold">{conversationMemory.length / 2}</span>
+              </button>
+            )}
+            {(chatHistory.length > 0 || response) && (
+              <button
+                onClick={clearChatHistory}
+                className="flex items-center gap-2 px-3 py-1.5 text-xs text-neutral-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                title="Clear all chat history and responses"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                Clear History
+              </button>
+            )}
+          </div>
         )}
       </div>
 
