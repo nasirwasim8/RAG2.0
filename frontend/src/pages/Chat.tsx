@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Send, Loader2, Zap, Shield, ChevronDown, Clock, Trash2, Info, Database, FileText } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -741,6 +741,73 @@ export default function ChatPage() {
           <p className="text-sm text-neutral-400 mt-1">DDN INFINIA-accelerated retrieval</p>
         </div>
       )}
+
+      {/* ── Live Infinia Activity Feed Overlay (fixed, slides in from right) ── */}
+      <AnimatePresence>
+        {showFeed && (
+          <motion.div
+            initial={{ opacity: 0, x: 60 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 60 }}
+            transition={{ duration: 0.3, ease: 'easeOut' }}
+            className="fixed right-5 top-1/2 -translate-y-1/2 w-80 z-50"
+          >
+            <div className="bg-gray-950/95 backdrop-blur-xl border border-emerald-500/40 rounded-2xl shadow-2xl overflow-hidden">
+              <div className="flex items-center gap-2 px-4 py-3 border-b border-emerald-500/20 bg-emerald-950/50">
+                <div className="relative flex items-center justify-center w-3 h-3">
+                  <div className="w-2 h-2 rounded-full bg-emerald-400 animate-ping absolute opacity-60" />
+                  <div className="w-2 h-2 rounded-full bg-emerald-400 relative" />
+                </div>
+                <span className="text-emerald-300 text-xs font-bold tracking-widest uppercase ml-1">Infinia Activity</span>
+                <div className="ml-auto flex items-center gap-2">
+                  <span className="text-gray-500 text-xs font-mono tabular-nums">{infiniaFeedEvents.length} ops</span>
+                  <button onClick={() => { setShowFeed(false); feedAbortRef.current?.abort() }} className="text-gray-600 hover:text-gray-300 text-lg leading-none" aria-label="Close">&times;</button>
+                </div>
+              </div>
+              <div ref={feedScrollRef} className="h-60 overflow-y-auto p-2 space-y-0.5 bg-gray-950/60">
+                {infiniaFeedEvents.length === 0 ? (
+                  <div className="flex items-center gap-2 px-3 py-5 text-gray-500 text-xs">
+                    <Loader2 className="w-3 h-3 animate-spin text-emerald-500 shrink-0" />
+                    <span>Waiting for Infinia operations...</span>
+                  </div>
+                ) : (
+                  infiniaFeedEvents.map((event: InfiniaEvent) => (
+                    <motion.div key={event.id} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.12 }}
+                      className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-mono ${
+                        event.type === 'READ' ? 'bg-blue-500/10 border border-blue-500/15' : 'bg-emerald-500/10 border border-emerald-500/15'
+                      }`}
+                    >
+                      <span className="text-sm shrink-0">{event.type === 'READ' ? '\u{1F4D6}' : '\u270D\uFE0F'}</span>
+                      <div className="flex-1 min-w-0">
+                        <div className={`truncate ${event.type === 'READ' ? 'text-blue-300' : 'text-emerald-300'}`}>
+                          {event.key.split('/').pop() ?? event.key}
+                        </div>
+                        <div className="text-gray-600 text-[10px]">{(event.bytes / 1024).toFixed(1)} KB &middot; {event.ts}</div>
+                      </div>
+                      <span className={`shrink-0 font-bold tabular-nums ${
+                        event.latency_ms < 20 ? 'text-emerald-400' : event.latency_ms < 60 ? 'text-yellow-400' : 'text-red-400'
+                      }`}>{event.latency_ms}ms</span>
+                    </motion.div>
+                  ))
+                )}
+              </div>
+              {infiniaFeedEvents.length > 0 && (() => {
+                const totalKB = infiniaFeedEvents.reduce((s: number, e: InfiniaEvent) => s + e.bytes, 0) / 1024
+                const avgLat  = infiniaFeedEvents.reduce((s: number, e: InfiniaEvent) => s + e.latency_ms, 0) / infiniaFeedEvents.length
+                const reads   = infiniaFeedEvents.filter((e: InfiniaEvent) => e.type === 'READ').length
+                const writes  = infiniaFeedEvents.filter((e: InfiniaEvent) => e.type === 'WRITE').length
+                return (
+                  <div className="border-t border-emerald-500/20 bg-gray-950/80 px-4 py-2.5 grid grid-cols-3 gap-2 text-center">
+                    <div><div className="text-white font-bold text-sm font-mono">{infiniaFeedEvents.length}</div><div className="text-gray-500 text-[10px]">{reads}R / {writes}W</div></div>
+                    <div><div className="text-white font-bold text-sm font-mono">{totalKB.toFixed(1)}</div><div className="text-gray-500 text-[10px]">KB total</div></div>
+                    <div><div className="text-emerald-400 font-bold text-sm font-mono">{avgLat.toFixed(1)}ms</div><div className="text-gray-500 text-[10px]">avg latency</div></div>
+                  </div>
+                )
+              })()}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
@@ -877,73 +944,6 @@ function RetrievedChunks({ chunks }: { chunks: QueryResponse['retrieved_chunks']
                   </p>
                 </div>
               ))}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* â”€â”€ Live Infinia Activity Feed Overlay (fixed, slides in from right) â”€â”€ */}
-      <AnimatePresence>
-        {showFeed && (
-          <motion.div
-            initial={{ opacity: 0, x: 60 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: 60 }}
-            transition={{ duration: 0.3, ease: 'easeOut' }}
-            className="fixed right-5 top-1/2 -translate-y-1/2 w-80 z-50"
-          >
-            <div className="bg-gray-950/95 backdrop-blur-xl border border-emerald-500/40 rounded-2xl shadow-2xl overflow-hidden">
-              <div className="flex items-center gap-2 px-4 py-3 border-b border-emerald-500/20 bg-emerald-950/50">
-                <div className="relative flex items-center justify-center w-3 h-3">
-                  <div className="w-2 h-2 rounded-full bg-emerald-400 animate-ping absolute opacity-60" />
-                  <div className="w-2 h-2 rounded-full bg-emerald-400 relative" />
-                </div>
-                <span className="text-emerald-300 text-xs font-bold tracking-widest uppercase ml-1">Infinia Activity</span>
-                <div className="ml-auto flex items-center gap-2">
-                  <span className="text-gray-500 text-xs font-mono tabular-nums">{infiniaFeedEvents.length} ops</span>
-                  <button onClick={() => { setShowFeed(false); feedAbortRef.current?.abort() }} className="text-gray-600 hover:text-gray-300 text-lg leading-none" aria-label="Close">Ã—</button>
-                </div>
-              </div>
-              <div ref={feedScrollRef} className="h-60 overflow-y-auto p-2 space-y-0.5 bg-gray-950/60">
-                {infiniaFeedEvents.length === 0 ? (
-                  <div className="flex items-center gap-2 px-3 py-5 text-gray-500 text-xs">
-                    <Loader2 className="w-3 h-3 animate-spin text-emerald-500 shrink-0" />
-                    <span>Waiting for Infinia operationsâ€¦</span>
-                  </div>
-                ) : (
-                  infiniaFeedEvents.map((event: InfiniaEvent) => (
-                    <motion.div key={event.id} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.12 }}
-                      className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-mono ${
-                        event.type === 'READ' ? 'bg-blue-500/10 border border-blue-500/15' : 'bg-emerald-500/10 border border-emerald-500/15'
-                      }`}
-                    >
-                      <span className="text-sm shrink-0">{event.type === 'READ' ? 'ðŸ“–' : 'âœï¸'}</span>
-                      <div className="flex-1 min-w-0">
-                        <div className={`truncate ${event.type === 'READ' ? 'text-blue-300' : 'text-emerald-300'}`}>
-                          {event.key.split('/').pop() ?? event.key}
-                        </div>
-                        <div className="text-gray-600 text-[10px]">{(event.bytes / 1024).toFixed(1)}Â KB Â· {event.ts}</div>
-                      </div>
-                      <span className={`shrink-0 font-bold tabular-nums ${
-                        event.latency_ms < 20 ? 'text-emerald-400' : event.latency_ms < 60 ? 'text-yellow-400' : 'text-red-400'
-                      }`}>{event.latency_ms}ms</span>
-                    </motion.div>
-                  ))
-                )}
-              </div>
-              {infiniaFeedEvents.length > 0 && (() => {
-                const totalKB = infiniaFeedEvents.reduce((s: number, e: InfiniaEvent) => s + e.bytes, 0) / 1024
-                const avgLat  = infiniaFeedEvents.reduce((s: number, e: InfiniaEvent) => s + e.latency_ms, 0) / infiniaFeedEvents.length
-                const reads   = infiniaFeedEvents.filter((e: InfiniaEvent) => e.type === 'READ').length
-                const writes  = infiniaFeedEvents.filter((e: InfiniaEvent) => e.type === 'WRITE').length
-                return (
-                  <div className="border-t border-emerald-500/20 bg-gray-950/80 px-4 py-2.5 grid grid-cols-3 gap-2 text-center">
-                    <div><div className="text-white font-bold text-sm font-mono">{infiniaFeedEvents.length}</div><div className="text-gray-500 text-[10px]">{reads}RÂ /Â {writes}W</div></div>
-                    <div><div className="text-white font-bold text-sm font-mono">{totalKB.toFixed(1)}</div><div className="text-gray-500 text-[10px]">KBÂ total</div></div>
-                    <div><div className="text-emerald-400 font-bold text-sm font-mono">{avgLat.toFixed(1)}ms</div><div className="text-gray-500 text-[10px]">avgÂ latency</div></div>
-                  </div>
-                )
-              })()}
             </div>
           </motion.div>
         )}
