@@ -244,33 +244,30 @@ export default function ChatPage() {
         </p>
       </div>
 
-      {/* Live Vector Store Stats Bar */}
+      {/* Live Infinia Storage Stats Bar */}
       {docStats && docStats.total_chunks > 0 && (
         <div className="flex flex-wrap items-center gap-3 px-4 py-2.5 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-xl text-xs">
+          {/* PRIMARY METRIC: chunks stored in Infinia */}
           <div className="flex items-center gap-1.5 text-emerald-700">
             <Database className="w-3.5 h-3.5" />
             <span className="font-black font-mono text-base leading-none">{docStats.total_chunks.toLocaleString()}</span>
-            <span className="font-semibold">vectors indexed</span>
+            <span className="font-semibold">chunks stored in Infinia</span>
           </div>
           <div className="w-px h-4 bg-emerald-200" />
-          <div className="text-emerald-600 font-medium">
-            {docStats.count} document{docStats.count !== 1 ? 's' : ''} on Infinia
-          </div>
+          {/* Per-document chunk breakdown */}
           {docStats.documents.length > 0 && (
-            <>
-              <div className="w-px h-4 bg-emerald-200" />
-              <div className="flex items-center gap-1.5 flex-wrap">
-                {docStats.documents.slice(0, 3).map((doc: { filename: string }) => (
-                  <span key={doc.filename} className="flex items-center gap-1 px-2 py-0.5 bg-white border border-emerald-200 text-emerald-700 rounded-md font-medium">
-                    <FileText className="w-3 h-3" />
-                    {doc.filename}
-                  </span>
-                ))}
-                {docStats.count > 3 && (
-                  <span className="text-emerald-500">+{docStats.count - 3} more</span>
-                )}
-              </div>
-            </>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {docStats.documents.slice(0, 4).map((doc: { filename: string; chunks: number }) => (
+                <span key={doc.filename} className="flex items-center gap-1 px-2 py-0.5 bg-white border border-emerald-200 text-emerald-700 rounded-md font-medium group">
+                  <FileText className="w-3 h-3 shrink-0" />
+                  <span className="max-w-[140px] truncate">{doc.filename}</span>
+                  <span className="text-emerald-500 font-mono font-bold shrink-0">· {doc.chunks}</span>
+                </span>
+              ))}
+              {docStats.count > 4 && (
+                <span className="text-emerald-500 font-medium">+{docStats.count - 4} more</span>
+              )}
+            </div>
           )}
           <div className="ml-auto flex items-center gap-1 text-emerald-400">
             <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />

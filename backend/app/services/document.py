@@ -469,19 +469,24 @@ class DocumentProcessor:
     def process_file(
         self,
         file_path: str,
-        progress_callback: Optional[Callable] = None
+        progress_callback: Optional[Callable] = None,
+        original_filename: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
         """
         Process a file: extract text and create semantic chunks with progress tracking.
 
         Args:
-            file_path: Path to the file to process
+            file_path: Path to the (possibly temporary) file to process
             progress_callback: Optional callback(current, total, message)
+            original_filename: The real file name supplied by the user (e.g. 'DDN-brief.pdf').
+                               When provided this is stored in chunk metadata as 'source' so
+                               the Chat UI shows the real name instead of the temp path.
 
         Returns:
             List of chunk dictionaries with semantic metadata
         """
-        filename = os.path.basename(file_path)
+        # Use the supplied display name; fall back to the basename of the temp path
+        filename = original_filename or os.path.basename(file_path)
 
         if not self.is_supported(filename):
             raise ValueError(f"Unsupported file type: {filename}")

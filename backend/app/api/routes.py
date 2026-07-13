@@ -388,7 +388,10 @@ async def upload_document_tracked(file: UploadFile = File(...), enable_s3: bool 
                 raise RuntimeError("Timed out waiting for vector store lock — another upload is running")
 
             try:
-                chunks = document_processor.process_file(tmp_path)
+                chunks = document_processor.process_file(
+                    tmp_path,
+                    original_filename=filename,  # use real name, not temp path
+                )
                 _upload_progress[upload_id]["chunks_total"] = len(chunks)
 
                 def _cb(chunks_done, chunks_total, embeddings_per_sec, provider_write_stats):
