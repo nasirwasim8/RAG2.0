@@ -353,9 +353,6 @@ class VectorStore:
         logger.info(f"   Index size AFTER: {self.index.ntotal} chunks")
         logger.info(f"   Metadata entries: {len(self.chunk_metadata)}")
 
-        # Persist updated FAISS index + metadata to Infinia after every ingest
-        self.save_index_to_infinia()
-
         return results
 
 
@@ -676,9 +673,17 @@ class VectorStore:
                 logger.error(f"❌ Failed to persist FAISS index to Infinia: {msg}")
                 return False
 
-            # 2. Persist chunk metadata and counter
-            handler.upload_bytes(pickle.dumps(self.chunk_metadata), METADATA_KEY)
-            handler.upload_bytes(pickle.dumps(self.chunk_counter),  COUNTER_KEY)
+            # 2. Persist chunk metadata (CRITICAL — required for search after restart)
+            ok2, msg2 = handler.upload_bytes(pickle.dumps(self.chunk_metadata), METADATA_KEY)
+            if not ok2:
+                logger.error(f"❌ Failed to persist chunk metadata to Infinia: {msg2}")
+                return False
+
+            # 3. Persist chunk counter
+            ok3, msg3 = handler.upload_bytes(pickle.dumps(self.chunk_counter), COUNTER_KEY)
+            if not ok3:
+                logger.error(f"❌ Failed to persist chunk counter to Infinia: {msg3}")
+                logger.warning("⚠️  Chunk counter not saved — will be re-computed on next ingest")
 
             index_mb = len(index_bytes) / (1024 * 1024)
             logger.info(

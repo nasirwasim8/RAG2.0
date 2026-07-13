@@ -52,7 +52,46 @@ logger.info(f"📂 Bucket monitor initialized")
 # Key: filename, Value: {filename, chunks, timestamp, embedding_device, embedding_time_ms}
 _document_registry: dict = {}
 
-# Routers
+
+def _rebuild_registry_from_faiss() -> None:
+    """Reconstruct _document_registry from FAISS chunk_metadata restored from Infinia.
+
+    Called once at startup after VectorStore.__init__() runs load_index_from_infinia().
+    This ensures the Chat page can immediately query existing documents after a backend
+    restart without requiring the user to re-upload already-indexed documents.
+    """
+    if vector_store.total_chunks == 0:
+        return
+
+    counts: dict = {}
+    timestamps: dict = {}
+    for _meta_idx, meta in vector_store.chunk_metadata.items():
+        source = meta.get('metadata', {}).get('source', '')
+        ts = meta.get('metadata', {}).get('timestamp', '')
+        if source:
+            counts[source] = counts.get(source, 0) + 1
+            if source not in timestamps:  # keep first-seen timestamp
+                timestamps[source] = ts
+
+    for source, count in counts.items():
+        _document_registry[source] = {
+            'filename': source,
+            'chunks': count,
+            'timestamp': timestamps.get(source, datetime.utcnow().isoformat() + 'Z'),
+            'embedding_device': 'restored',
+            'embedding_time_ms': 0,
+        }
+
+    logger.info(
+        f"📋 Document registry rebuilt from Infinia: "
+        f"{len(_document_registry)} documents | {vector_store.total_chunks} total chunks"
+    )
+
+
+# Rebuild on startup if FAISS index was restored from Infinia
+_rebuild_registry_from_faiss()
+
+
 config_router = APIRouter(prefix="/config", tags=["Configuration"])
 documents_router = APIRouter(prefix="/documents", tags=["Documents"])
 rag_router = APIRouter(prefix="/rag", tags=["RAG"])
@@ -276,6 +315,21 @@ async def get_document_count():
     return {"total_chunks": vector_store.total_chunks}
 
 
+@documents_router.get("/debug/vectorstore")
+async def debug_vectorstore():
+    """Diagnostic: inspect current vector store and document registry state."""
+    return {
+        "faiss_total_chunks": vector_store.total_chunks,
+        "faiss_metadata_entries": len(vector_store.chunk_metadata),
+        "chunk_counter": vector_store.chunk_counter,
+        "documents_in_registry": len(_document_registry),
+        "registry_filenames": sorted(_document_registry.keys()),
+        "faiss_index_type": type(vector_store.index).__name__,
+        "storage_handlers": list(vector_store.storage_handlers.keys()),
+        "active_providers": vector_store.providers,
+    }
+
+
 # ── Tracked upload progress state ────────────────────────────────────────────
 # Key: upload_id (str), Value: progress dict updated by background thread
 _upload_progress: dict = {}
@@ -381,7 +435,14 @@ async def upload_document_tracked(file: UploadFile = File(...), enable_s3: bool 
                 'embedding_time_ms': results.get('embedding_time_ms', 0),
             }
 
+            # Mark SSE stream as complete so the client sees 100% immediately
+            # (FAISS persistence happens AFTER this, so the UI doesn't wait for it)
             _upload_progress[upload_id].update({"status": "done", "result": results})
+
+            # Persist FAISS index + metadata to Infinia now that ingest is done.
+            # Runs in the background thread while SSE waits for optional AWS results.
+            vector_store.save_index_to_infinia()
+
         except Exception as exc:
             _upload_progress[upload_id].update({"status": "error", "error": str(exc)})
             _upload_progress[upload_id]["aws_syncing"] = False  # Don't leave SSE hanging
