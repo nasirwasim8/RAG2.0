@@ -397,47 +397,38 @@ class DocumentProcessor:
 
     @staticmethod
     def _clean_extracted_text(text: str) -> str:
-        """Remove NaN-heavy and 'Unnamed:' column-header lines from table extraction artifacts.
+        """Strip NaN tokens and Unnamed column headers from PDF/Excel table extraction.
 
-        pdfplumber and pandas both produce lines like:
-          'NaN DDN Configuration (PB) 21 NaN NaN NaN NaN...'
-          'Unnamed: 0 Unnamed: 1 VALUE Unnamed: 3...'
-        These lines make chunks unreadable and poison the LLM context window.
-        Lines where >=40% of tokens are NaN/Unnamed are dropped entirely;
-        inline NaN tokens on cleaner lines are removed in-place.
+        pdfplumber and pandas produce content like:
+          'NaN DDN Configuration (PB) 21 NaN NaN NaN DDN Storage Cost ($M) 33980000'
+          'Unnamed: 0 Unnamed: 1 VALUE (Editable) Unnamed: 3'
+
+        IMPORTANT: we CLEAN tokens, not DROP lines.
+        The useful data (numbers, labels) lives in the same line as the NaN tokens.
+        Dropping entire lines (old approach) lost all real content from table-heavy PDFs.
         """
         cleaned = []
         for line in text.split('\n'):
-            tokens = line.strip().split()
-            if not tokens:
-                cleaned.append('')
-                continue
-            nan_count = sum(1 for t in tokens if t.lower() == 'nan')
-            unnamed_count = sum(1 for t in tokens if t.lower().startswith('unnamed:'))
-            garbage_ratio = (nan_count + unnamed_count) / len(tokens)
-            # Drop the entire line if 40%+ of its tokens are garbage
-            if garbage_ratio > 0.40:
-                continue
-            # Inline-remove remaining NaN tokens from lines that pass the threshold
+            # Remove standalone NaN tokens (whole-word, case-insensitive)
             cleaned_line = re.sub(r'\bNaN\b', '', line, flags=re.IGNORECASE)
+            # Remove 'Unnamed: 0', 'Unnamed: 12', etc.
+            cleaned_line = re.sub(r'\bUnnamed:\s*\d+\b', '', cleaned_line, flags=re.IGNORECASE)
+            # Collapse extra whitespace
             cleaned_line = re.sub(r'\s{2,}', ' ', cleaned_line).strip()
-            if cleaned_line:
+            # Only discard lines that have nothing left after cleaning (<2 words)
+            if len(cleaned_line.split()) >= 2:
                 cleaned.append(cleaned_line)
         return '\n'.join(cleaned)
 
     @staticmethod
     def _is_meaningful_chunk(text: str) -> bool:
-        """Return False for chunks that are still mostly NaN/Unnamed garbage after text cleaning.
+        """Return False only for near-empty chunks (< 5 words).
 
-        Used as a post-split quality gate: if >25% of a chunk's tokens are NaN or
-        Unnamed:N, that chunk is useless as LLM context and should be discarded.
+        Since _clean_extracted_text() already removes NaN/Unnamed tokens,
+        chunks should be clean by the time they reach this gate.
+        This is now purely a minimum-length check.
         """
-        tokens = text.split()
-        if len(tokens) < 5:
-            return False
-        nan_count = sum(1 for t in tokens if t.lower() == 'nan')
-        unnamed_count = sum(1 for t in tokens if t.lower().startswith('unnamed:'))
-        return (nan_count + unnamed_count) / len(tokens) < 0.25
+        return len(text.split()) >= 5
 
     def create_chunks(
         self,

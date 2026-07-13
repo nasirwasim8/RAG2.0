@@ -684,7 +684,10 @@ function IngestionPanel({ progress }: { progress: IngestionProgress }) {
 
 export default function DocumentsPage() {
   const queryClient = useQueryClient()
-  const [uploadedFiles, setUploadedFiles] = useState<string[]>([])
+  const [uploadedFiles, setUploadedFiles] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem('rag_uploaded_files') || '[]') }
+    catch { return [] }
+  })
   const [clearBeforeProcess, setClearBeforeProcess] = useState(false)
   const [useNvIngest, setUseNvIngest] = useState(true)
   const [enableS3, setEnableS3] = useState<boolean>(() => {
@@ -709,6 +712,7 @@ export default function DocumentsPage() {
   const { data: docCount } = useQuery({
     queryKey: ['documentCount'],
     queryFn: () => getDocumentCount().then((res) => res.data),
+    refetchInterval: 8_000,  // live update during ingestion
   })
 
   // Restore document list from backend on mount (survives page navigation)
@@ -716,6 +720,7 @@ export default function DocumentsPage() {
     queryKey: ['documentList'],
     queryFn: () => api.getDocumentList(),
     staleTime: 0,
+    refetchInterval: 10_000,  // re-sync with backend every 10s
   })
   useEffect(() => {
     if (docListData?.documents && docListData.documents.length > 0) {
@@ -727,6 +732,11 @@ export default function DocumentsPage() {
       })
     }
   }, [docListData])
+
+  // Persist uploadedFiles to localStorage so navigation doesn’t wipe the list
+  useEffect(() => {
+    localStorage.setItem('rag_uploaded_files', JSON.stringify(uploadedFiles))
+  }, [uploadedFiles])
 
   const { data: healthData } = useQuery({
     queryKey: ['health'],
@@ -926,6 +936,7 @@ ${successful.map((r: any) => `- ${r.filename}: ${r.chunks} chunks`).join('\n')}$
     onSuccess: () => {
       setUploadedFiles([])
       setProcessingResults('')
+      localStorage.removeItem('rag_uploaded_files')  // wipe persisted list on clear
       toast.success('Vector store cleared')
       queryClient.invalidateQueries({ queryKey: ['documentCount'] })
       queryClient.invalidateQueries({ queryKey: ['health'] })
@@ -1051,7 +1062,7 @@ across all chunk sizes.
           <div className="stat-value text-ddn-red">{docCount?.total_chunks ?? 0}</div>
         </div>
         <div className="stat-card">
-          <div className="stat-label">Files This Session</div>
+          <div className="stat-label">Documents Indexed</div>
           <div className="stat-value">{uploadedFiles.length}</div>
         </div>
         <div className="stat-card col-span-2">
