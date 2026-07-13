@@ -395,6 +395,50 @@ class DocumentProcessor:
 
         return "\n\n".join(text_parts)
 
+    @staticmethod
+    def _clean_extracted_text(text: str) -> str:
+        """Remove NaN-heavy and 'Unnamed:' column-header lines from table extraction artifacts.
+
+        pdfplumber and pandas both produce lines like:
+          'NaN DDN Configuration (PB) 21 NaN NaN NaN NaN...'
+          'Unnamed: 0 Unnamed: 1 VALUE Unnamed: 3...'
+        These lines make chunks unreadable and poison the LLM context window.
+        Lines where >=40% of tokens are NaN/Unnamed are dropped entirely;
+        inline NaN tokens on cleaner lines are removed in-place.
+        """
+        cleaned = []
+        for line in text.split('\n'):
+            tokens = line.strip().split()
+            if not tokens:
+                cleaned.append('')
+                continue
+            nan_count = sum(1 for t in tokens if t.lower() == 'nan')
+            unnamed_count = sum(1 for t in tokens if t.lower().startswith('unnamed:'))
+            garbage_ratio = (nan_count + unnamed_count) / len(tokens)
+            # Drop the entire line if 40%+ of its tokens are garbage
+            if garbage_ratio > 0.40:
+                continue
+            # Inline-remove remaining NaN tokens from lines that pass the threshold
+            cleaned_line = re.sub(r'\bNaN\b', '', line, flags=re.IGNORECASE)
+            cleaned_line = re.sub(r'\s{2,}', ' ', cleaned_line).strip()
+            if cleaned_line:
+                cleaned.append(cleaned_line)
+        return '\n'.join(cleaned)
+
+    @staticmethod
+    def _is_meaningful_chunk(text: str) -> bool:
+        """Return False for chunks that are still mostly NaN/Unnamed garbage after text cleaning.
+
+        Used as a post-split quality gate: if >25% of a chunk's tokens are NaN or
+        Unnamed:N, that chunk is useless as LLM context and should be discarded.
+        """
+        tokens = text.split()
+        if len(tokens) < 5:
+            return False
+        nan_count = sum(1 for t in tokens if t.lower() == 'nan')
+        unnamed_count = sum(1 for t in tokens if t.lower().startswith('unnamed:'))
+        return (nan_count + unnamed_count) / len(tokens) < 0.25
+
     def create_chunks(
         self,
         text: str,
@@ -419,6 +463,15 @@ class DocumentProcessor:
             self.chunk_overlap,
             progress_callback
         )
+
+        # Quality gate: discard any chunk still NaN-heavy after text cleaning
+        before = len(chunks)
+        chunks = [c for c in chunks if self._is_meaningful_chunk(c.get('content', ''))]
+        if before != len(chunks):
+            logger.info(
+                f"   ✅ Quality filter: dropped {before - len(chunks)} NaN-heavy chunks → "
+                f"{len(chunks)} clean, meaningful chunks retained"
+            )
 
         return chunks
 
@@ -447,6 +500,9 @@ class DocumentProcessor:
             progress_callback(0, 100, f"Extracting text from {filename}")
         
         text = self.extract_text(file_path, progress_callback)
+        # Strip NaN/Unnamed garbage lines from table extraction BEFORE chunking
+        # This prevents 'NaN NaN NaN NaN...' tokens from polluting the LLM context
+        text = self._clean_extracted_text(text)
         
         logger.info(f"   Extracted {len(text)} characters from {filename}")
         

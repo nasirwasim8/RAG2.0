@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Send, Loader2, Zap, Shield, ChevronDown, Clock, Trash2, Info } from 'lucide-react'
+import { Send, Loader2, Zap, Shield, ChevronDown, Clock, Trash2, Info, Database, FileText } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { api, getAvailableModels, getHealth, QueryResponse } from '../services/api'
 import toast from 'react-hot-toast'
@@ -136,6 +136,13 @@ export default function ChatPage() {
     queryFn: () => getHealth().then((res) => res.data),
   })
 
+  // Live vector store stats — polls every 15s to reflect newly ingested documents
+  const { data: docStats } = useQuery({
+    queryKey: ['docListForChat'],
+    queryFn: () => api.getDocumentList(),
+    refetchInterval: 15_000,
+  })
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!query.trim() || isStreaming) return
@@ -236,6 +243,41 @@ export default function ChatPage() {
           Query your documents with NVIDIA NeMo reranking and DDN INFINIA acceleration.
         </p>
       </div>
+
+      {/* Live Vector Store Stats Bar */}
+      {docStats && docStats.total_chunks > 0 && (
+        <div className="flex flex-wrap items-center gap-3 px-4 py-2.5 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-xl text-xs">
+          <div className="flex items-center gap-1.5 text-emerald-700">
+            <Database className="w-3.5 h-3.5" />
+            <span className="font-black font-mono text-base leading-none">{docStats.total_chunks.toLocaleString()}</span>
+            <span className="font-semibold">vectors indexed</span>
+          </div>
+          <div className="w-px h-4 bg-emerald-200" />
+          <div className="text-emerald-600 font-medium">
+            {docStats.count} document{docStats.count !== 1 ? 's' : ''} on Infinia
+          </div>
+          {docStats.documents.length > 0 && (
+            <>
+              <div className="w-px h-4 bg-emerald-200" />
+              <div className="flex items-center gap-1.5 flex-wrap">
+                {docStats.documents.slice(0, 3).map((doc: { filename: string }) => (
+                  <span key={doc.filename} className="flex items-center gap-1 px-2 py-0.5 bg-white border border-emerald-200 text-emerald-700 rounded-md font-medium">
+                    <FileText className="w-3 h-3" />
+                    {doc.filename}
+                  </span>
+                ))}
+                {docStats.count > 3 && (
+                  <span className="text-emerald-500">+{docStats.count - 3} more</span>
+                )}
+              </div>
+            </>
+          )}
+          <div className="ml-auto flex items-center gap-1 text-emerald-400">
+            <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            <span>Live</span>
+          </div>
+        </div>
+      )}
 
       {/* Query Input Card */}
       <div className="card-elevated p-5">
@@ -457,6 +499,28 @@ export default function ChatPage() {
                 <p className="text-neutral-800 whitespace-pre-wrap leading-relaxed text-[15px]">{streamingText || response.response}</p>
               </div>
 
+              {/* Sources referenced */}
+              {(() => {
+                const sources = [...new Set(
+                  response.retrieved_chunks
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    .map((c) => (c.metadata as any)?.source as string | undefined)
+                    .filter((s): s is string => Boolean(s))
+                )]
+                if (!sources.length) return null
+                return (
+                  <div className="flex flex-wrap items-center gap-2 mt-4 pt-4 border-t border-neutral-100">
+                    <span className="text-xs text-neutral-500 font-semibold uppercase tracking-wide shrink-0">Sources:</span>
+                    {sources.map((src) => (
+                      <span key={src} className="flex items-center gap-1 px-2 py-1 bg-blue-50 border border-blue-100 text-blue-700 rounded-lg text-xs font-medium">
+                        <FileText className="w-3 h-3" />
+                        {src}
+                      </span>
+                    ))}
+                  </div>
+                )
+              })()}
+
               {/* ── TPS + TTFT badges ── */}
               {(tpsValue !== null || ttftMs !== null) && (
                 <div className="flex flex-wrap gap-3 mt-5 pt-4 border-t border-neutral-100">
@@ -630,18 +694,44 @@ function RetrievedChunks({ chunks }: { chunks: QueryResponse['retrieved_chunks']
             className="overflow-hidden"
           >
             <div className="px-5 pb-5 space-y-3 border-t border-neutral-100 pt-4">
+              {/* Unique sources summary when chunks come from multiple docs */}
+              {(() => {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const sources = [...new Set(chunks.map(c => (c.metadata as any)?.source as string | undefined).filter(Boolean))] as string[]
+                if (sources.length <= 1) return null
+                return (
+                  <div className="flex flex-wrap items-center gap-1.5 pb-3 border-b border-neutral-100">
+                    <span className="text-xs text-neutral-400 font-semibold uppercase tracking-wide">From:</span>
+                    {sources.map(src => (
+                      <span key={src} className="flex items-center gap-1 px-2 py-0.5 bg-blue-50 text-blue-600 border border-blue-100 rounded-md text-xs font-medium">
+                        <FileText className="w-3 h-3" />
+                        {src}
+                      </span>
+                    ))}
+                  </div>
+                )
+              })()}
               {chunks.map((chunk, i) => (
                 <div
                   key={i}
                   className="p-4 bg-surface-secondary rounded-xl"
                 >
-                  <div className="flex items-center gap-3 mb-3">
-                    <span className="w-6 h-6 rounded-md bg-neutral-200 flex items-center justify-center text-xs font-semibold text-neutral-600">
+                  <div className="flex items-center gap-2 mb-3 flex-wrap">
+                    <span className="w-6 h-6 rounded-md bg-neutral-200 flex items-center justify-center text-xs font-semibold text-neutral-600 shrink-0">
                       {i + 1}
                     </span>
                     <span className="badge badge-neutral text-xs">
                       Distance: {chunk.distance.toFixed(4)}
                     </span>
+                    {/* Source filename badge */}
+                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                    {(chunk.metadata as any)?.source && (
+                      <span className="flex items-center gap-1 px-2 py-0.5 bg-blue-50 border border-blue-100 text-blue-600 rounded-md text-xs font-medium">
+                        <FileText className="w-3 h-3" />
+                        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                        {(chunk.metadata as any).source}
+                      </span>
+                    )}
                     {chunk.rerank_score && (
                       <span className="badge badge-nvidia text-xs">
                         Rerank: {chunk.rerank_score.toFixed(2)}
