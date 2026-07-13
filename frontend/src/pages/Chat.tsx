@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+﻿import { useState, useEffect, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Send, Loader2, Zap, Shield, ChevronDown, Clock, Trash2, Info, Database, FileText } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -35,7 +35,7 @@ export default function ChatPage() {
   const [hasLoadedHistory, setHasLoadedHistory] = useState(false)
   const [hasLoadedResponse, setHasLoadedResponse] = useState(false)
 
-  // ── Streaming state ─────────────────────────────────────────────────────────
+  // â”€â”€ Streaming state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const [isStreaming, setIsStreaming] = useState(false)
   const [streamingText, setStreamingText] = useState('')
   const [ttftMs, setTtftMs] = useState<number | null>(null)
@@ -53,16 +53,16 @@ export default function ChatPage() {
   const fastestProviderRef = useRef<string>('ddn_infinia')
   const ttfbImprovementRef = useRef<Record<string, unknown>>({})
 
-  // ── Conversation memory (multi-turn context, session-only) ───────────────────
+  // â”€â”€ Conversation memory (multi-turn context, session-only) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const [conversationMemory, setConversationMemory] = useState<ConversationMessage[]>([])
   // Accumulates full streamed response text to add to conversation memory on done
   const fullResponseRef = useRef<string>('')
 
-  // ── Cold-start demo state ────────────────────────────────────────────────────
+  // â”€â”€ Cold-start demo state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const [isColdStartLoading, setIsColdStartLoading] = useState(false)
   const [coldStartResult, setColdStartResult] = useState<{ chunks_restored: number; load_time_s: number } | null>(null)
 
-  // ── Live Infinia Activity Feed ────────────────────────────────────────────────
+  // â”€â”€ Live Infinia Activity Feed â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const [infiniaFeedEvents, setInfiniaFeedEvents] = useState<InfiniaEvent[]>([])
   const [showFeed, setShowFeed] = useState(false)
   const feedAbortRef = useRef<AbortController | null>(null)
@@ -106,7 +106,7 @@ export default function ChatPage() {
     if (storedHistory.length > 0) {
       setHasLoadedHistory(true)
       toast.success(`Loaded ${storedHistory.length} previous ${storedHistory.length === 1 ? 'query' : 'queries'} from session`, {
-        icon: '📋',
+        icon: 'ðŸ“‹',
         duration: 4000,
         position: 'bottom-right',
       })
@@ -115,7 +115,7 @@ export default function ChatPage() {
     if (storedResponse) {
       setHasLoadedResponse(true)
       toast.success('Previous response restored from session', {
-        icon: '💾',
+        icon: 'ðŸ’¾',
         duration: 4000,
         position: 'bottom-right',
       })
@@ -137,7 +137,7 @@ export default function ChatPage() {
     setHasLoadedResponse(false)
 
     toast.success('Chat history cleared', {
-      icon: '🗑️',
+      icon: 'ðŸ—‘ï¸',
       duration: 2000,
     })
   }
@@ -145,8 +145,8 @@ export default function ChatPage() {
   // Clear conversation memory (multi-turn context) without clearing display history
   const handleNewConversation = () => {
     setConversationMemory([])
-    toast.success('New conversation started — memory cleared', {
-      icon: '🔄',
+    toast.success('New conversation started â€” memory cleared', {
+      icon: 'ðŸ”„',
       duration: 2000,
     })
   }
@@ -163,7 +163,7 @@ export default function ChatPage() {
       setTimeout(() => setColdStartResult(null), 10_000)
     } catch (err: unknown) {
       const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail
-      toast.error(detail || 'Cold-start demo failed — ingest documents first')
+      toast.error(detail || 'Cold-start demo failed â€” ingest documents first')
     } finally {
       setIsColdStartLoading(false)
     }
@@ -179,7 +179,7 @@ export default function ChatPage() {
     queryFn: () => getHealth().then((res) => res.data),
   })
 
-  // Live vector store stats — polls every 15s to reflect newly ingested documents
+  // Live vector store stats â€” polls every 15s to reflect newly ingested documents
   const { data: docStats } = useQuery({
     queryKey: ['docListForChat'],
     queryFn: () => api.getDocumentList(),
@@ -225,7 +225,7 @@ export default function ChatPage() {
       query,
       selectedModel,
       5,
-      // onStart — storage TTFB + full chunk data arrives
+      // onStart â€” storage TTFB + full chunk data arrives
       (ttfbMs, awsTtfbMs, _chunksFound, chunks, providerTimes, fastestProvider, ttfbImprovement) => {
         // Write to both state (display) and refs (closures read refs)
         setStreamDdnTtfb(ttfbMs)
@@ -237,7 +237,7 @@ export default function ChatPage() {
         fastestProviderRef.current = fastestProvider
         ttfbImprovementRef.current = ttfbImprovement
       },
-      // onToken — each token
+      // onToken â€” each token
       (token) => {
         if (!firstTokenRef.current) {
           firstTokenRef.current = true
@@ -246,7 +246,7 @@ export default function ChatPage() {
         setStreamingText(prev => prev + token)
         fullResponseRef.current += token  // accumulate for conversation memory
       },
-      // onDone — read from refs (not state) to avoid stale closure
+      // onDone â€” read from refs (not state) to avoid stale closure
       (_totalTokens, elapsedMs, tps) => {
         setTpsValue(tps)
         setIsStreaming(false)
@@ -337,7 +337,7 @@ export default function ChatPage() {
                 <span key={doc.filename} className="flex items-center gap-1 px-2 py-0.5 bg-white border border-emerald-200 text-emerald-700 rounded-md font-medium group">
                   <FileText className="w-3 h-3 shrink-0" />
                   <span className="max-w-[140px] truncate">{doc.filename}</span>
-                  <span className="text-emerald-500 font-mono font-bold shrink-0">· {doc.chunks}</span>
+                  <span className="text-emerald-500 font-mono font-bold shrink-0">Â· {doc.chunks}</span>
                 </span>
               ))}
               {docStats.count > 4 && (
@@ -393,7 +393,7 @@ export default function ChatPage() {
               onClick={() => setColdStartResult(null)}
               className="text-white/60 hover:text-white text-xl leading-none shrink-0"
               aria-label="Dismiss"
-            >×</button>
+            >Ã—</button>
           </motion.div>
         )}
       </AnimatePresence>
@@ -482,7 +482,7 @@ export default function ChatPage() {
                 disabled={isStreaming || !query.trim()}
                 className="btn-primary"
               >
-                {isStreaming ? 'Generating…' : 'Get Answer'}
+                {isStreaming ? 'Generatingâ€¦' : 'Get Answer'}
               </button>
             </div>
           </div>
@@ -522,7 +522,7 @@ export default function ChatPage() {
                 className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors border border-blue-200"
                 title="Clear conversation memory and start fresh (keeps display history)"
               >
-                <span>🔄</span>
+                <span>ðŸ”„</span>
                 <span>New Conversation</span>
                 <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded-full font-mono font-bold">{conversationMemory.length / 2}</span>
               </button>
@@ -554,7 +554,7 @@ export default function ChatPage() {
         </div>
       )}
 
-      {/* ── Streaming Response (live) ── */}
+      {/* â”€â”€ Streaming Response (live) â”€â”€ */}
       {isStreaming && streamingText && (
         <motion.div
           initial={{ opacity: 0, y: 8 }}
@@ -571,7 +571,7 @@ export default function ChatPage() {
                     <span className="text-xl font-bold">{streamDdnTtfb.toFixed(0)}ms</span>
                     <span className="opacity-60 text-sm">DDN INFINIA</span>
                     <span className="text-lg opacity-40">vs</span>
-                    <span className="text-lg opacity-60">{streamAwsTtfb?.toFixed(0) ?? '—'}ms</span>
+                    <span className="text-lg opacity-60">{streamAwsTtfb?.toFixed(0) ?? 'â€”'}ms</span>
                     <span className="opacity-50 text-sm">AWS S3</span>
                   </div>
                 </div>
@@ -655,7 +655,7 @@ export default function ChatPage() {
                 )
               })()}
 
-              {/* ── TPS + TTFT badges ── */}
+              {/* â”€â”€ TPS + TTFT badges â”€â”€ */}
               {(tpsValue !== null || ttftMs !== null) && (
                 <div className="flex flex-wrap gap-3 mt-5 pt-4 border-t border-neutral-100">
                   {tpsValue !== null && (
@@ -717,7 +717,7 @@ export default function ChatPage() {
                     {response.fastest_provider === 'ddn_infinia' ? (
                       <img src="/logo-ddn.svg" alt="DDN" className="h-5 w-auto" />
                     ) : (
-                      <span className="text-lg font-semibold text-status-success">{response.fastest_provider ?? '—'}</span>
+                      <span className="text-lg font-semibold text-status-success">{response.fastest_provider ?? 'â€”'}</span>
                     )}
                   </div>
                 </div>
@@ -881,6 +881,73 @@ function RetrievedChunks({ chunks }: { chunks: QueryResponse['retrieved_chunks']
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* â”€â”€ Live Infinia Activity Feed Overlay (fixed, slides in from right) â”€â”€ */}
+      <AnimatePresence>
+        {showFeed && (
+          <motion.div
+            initial={{ opacity: 0, x: 60 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 60 }}
+            transition={{ duration: 0.3, ease: 'easeOut' }}
+            className="fixed right-5 top-1/2 -translate-y-1/2 w-80 z-50"
+          >
+            <div className="bg-gray-950/95 backdrop-blur-xl border border-emerald-500/40 rounded-2xl shadow-2xl overflow-hidden">
+              <div className="flex items-center gap-2 px-4 py-3 border-b border-emerald-500/20 bg-emerald-950/50">
+                <div className="relative flex items-center justify-center w-3 h-3">
+                  <div className="w-2 h-2 rounded-full bg-emerald-400 animate-ping absolute opacity-60" />
+                  <div className="w-2 h-2 rounded-full bg-emerald-400 relative" />
+                </div>
+                <span className="text-emerald-300 text-xs font-bold tracking-widest uppercase ml-1">Infinia Activity</span>
+                <div className="ml-auto flex items-center gap-2">
+                  <span className="text-gray-500 text-xs font-mono tabular-nums">{infiniaFeedEvents.length} ops</span>
+                  <button onClick={() => { setShowFeed(false); feedAbortRef.current?.abort() }} className="text-gray-600 hover:text-gray-300 text-lg leading-none" aria-label="Close">Ã—</button>
+                </div>
+              </div>
+              <div ref={feedScrollRef} className="h-60 overflow-y-auto p-2 space-y-0.5 bg-gray-950/60">
+                {infiniaFeedEvents.length === 0 ? (
+                  <div className="flex items-center gap-2 px-3 py-5 text-gray-500 text-xs">
+                    <Loader2 className="w-3 h-3 animate-spin text-emerald-500 shrink-0" />
+                    <span>Waiting for Infinia operationsâ€¦</span>
+                  </div>
+                ) : (
+                  infiniaFeedEvents.map((event: InfiniaEvent) => (
+                    <motion.div key={event.id} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.12 }}
+                      className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-mono ${
+                        event.type === 'READ' ? 'bg-blue-500/10 border border-blue-500/15' : 'bg-emerald-500/10 border border-emerald-500/15'
+                      }`}
+                    >
+                      <span className="text-sm shrink-0">{event.type === 'READ' ? 'ðŸ“–' : 'âœï¸'}</span>
+                      <div className="flex-1 min-w-0">
+                        <div className={`truncate ${event.type === 'READ' ? 'text-blue-300' : 'text-emerald-300'}`}>
+                          {event.key.split('/').pop() ?? event.key}
+                        </div>
+                        <div className="text-gray-600 text-[10px]">{(event.bytes / 1024).toFixed(1)}Â KB Â· {event.ts}</div>
+                      </div>
+                      <span className={`shrink-0 font-bold tabular-nums ${
+                        event.latency_ms < 20 ? 'text-emerald-400' : event.latency_ms < 60 ? 'text-yellow-400' : 'text-red-400'
+                      }`}>{event.latency_ms}ms</span>
+                    </motion.div>
+                  ))
+                )}
+              </div>
+              {infiniaFeedEvents.length > 0 && (() => {
+                const totalKB = infiniaFeedEvents.reduce((s: number, e: InfiniaEvent) => s + e.bytes, 0) / 1024
+                const avgLat  = infiniaFeedEvents.reduce((s: number, e: InfiniaEvent) => s + e.latency_ms, 0) / infiniaFeedEvents.length
+                const reads   = infiniaFeedEvents.filter((e: InfiniaEvent) => e.type === 'READ').length
+                const writes  = infiniaFeedEvents.filter((e: InfiniaEvent) => e.type === 'WRITE').length
+                return (
+                  <div className="border-t border-emerald-500/20 bg-gray-950/80 px-4 py-2.5 grid grid-cols-3 gap-2 text-center">
+                    <div><div className="text-white font-bold text-sm font-mono">{infiniaFeedEvents.length}</div><div className="text-gray-500 text-[10px]">{reads}RÂ /Â {writes}W</div></div>
+                    <div><div className="text-white font-bold text-sm font-mono">{totalKB.toFixed(1)}</div><div className="text-gray-500 text-[10px]">KBÂ total</div></div>
+                    <div><div className="text-emerald-400 font-bold text-sm font-mono">{avgLat.toFixed(1)}ms</div><div className="text-gray-500 text-[10px]">avgÂ latency</div></div>
+                  </div>
+                )
+              })()}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
@@ -971,106 +1038,6 @@ function ChatHistory({ history, onSelectQuery }: { history: ChatHistoryEntry[], 
                   </p>
                 </div>
               ))}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* ── Live Infinia Activity Feed Overlay (fixed, slides in from right) ── */}
-      <AnimatePresence>
-        {showFeed && (
-          <motion.div
-            initial={{ opacity: 0, x: 60 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: 60 }}
-            transition={{ duration: 0.3, ease: 'easeOut' }}
-            className="fixed right-5 top-1/2 -translate-y-1/2 w-80 z-50"
-          >
-            <div className="bg-gray-950/95 backdrop-blur-xl border border-emerald-500/40 rounded-2xl shadow-2xl overflow-hidden">
-              {/* Header */}
-              <div className="flex items-center gap-2 px-4 py-3 border-b border-emerald-500/20 bg-emerald-950/50">
-                <div className="relative flex items-center justify-center w-3 h-3">
-                  <div className="w-2 h-2 rounded-full bg-emerald-400 animate-ping absolute opacity-60" />
-                  <div className="w-2 h-2 rounded-full bg-emerald-400 relative" />
-                </div>
-                <span className="text-emerald-300 text-xs font-bold tracking-widest uppercase ml-1">Infinia Activity</span>
-                <div className="ml-auto flex items-center gap-2">
-                  <span className="text-gray-500 text-xs font-mono tabular-nums">{infiniaFeedEvents.length} ops</span>
-                  <button
-                    onClick={() => { setShowFeed(false); feedAbortRef.current?.abort() }}
-                    className="text-gray-600 hover:text-gray-300 text-lg leading-none transition-colors"
-                    aria-label="Close"
-                  >×</button>
-                </div>
-              </div>
-
-              {/* Events scroll area */}
-              <div ref={feedScrollRef} className="h-60 overflow-y-auto p-2 space-y-0.5 bg-gray-950/60">
-                {infiniaFeedEvents.length === 0 ? (
-                  <div className="flex items-center gap-2 px-3 py-5 text-gray-500 text-xs">
-                    <Loader2 className="w-3 h-3 animate-spin text-emerald-500 shrink-0" />
-                    <span>Waiting for Infinia operations…</span>
-                  </div>
-                ) : (
-                  infiniaFeedEvents.map((event) => (
-                    <motion.div
-                      key={event.id}
-                      initial={{ opacity: 0, y: 4 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.12 }}
-                      className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-mono ${
-                        event.type === 'READ'
-                          ? 'bg-blue-500/10 border border-blue-500/15'
-                          : 'bg-emerald-500/10 border border-emerald-500/15'
-                      }`}
-                    >
-                      <span className="text-sm shrink-0">
-                        {event.type === 'READ' ? '📖' : '✍️'}
-                      </span>
-                      <div className="flex-1 min-w-0">
-                        <div className={`truncate ${
-                          event.type === 'READ' ? 'text-blue-300' : 'text-emerald-300'
-                        }`}>
-                          {event.key.split('/').pop() ?? event.key}
-                        </div>
-                        <div className="text-gray-600 text-[10px]">
-                          {(event.bytes / 1024).toFixed(1)} KB · {event.ts}
-                        </div>
-                      </div>
-                      <span className={`shrink-0 font-bold tabular-nums ${
-                        event.latency_ms < 20 ? 'text-emerald-400' :
-                        event.latency_ms < 60 ? 'text-yellow-400' : 'text-red-400'
-                      }`}>
-                        {event.latency_ms}ms
-                      </span>
-                    </motion.div>
-                  ))
-                )}
-              </div>
-
-              {/* Summary footer */}
-              {infiniaFeedEvents.length > 0 && (() => {
-                const totalKB  = infiniaFeedEvents.reduce((s, e) => s + e.bytes, 0) / 1024
-                const avgLat   = infiniaFeedEvents.reduce((s, e) => s + e.latency_ms, 0) / infiniaFeedEvents.length
-                const reads    = infiniaFeedEvents.filter(e => e.type === 'READ').length
-                const writes   = infiniaFeedEvents.filter(e => e.type === 'WRITE').length
-                return (
-                  <div className="border-t border-emerald-500/20 bg-gray-950/80 px-4 py-2.5 grid grid-cols-3 gap-2 text-center">
-                    <div>
-                      <div className="text-white font-bold text-sm font-mono">{infiniaFeedEvents.length}</div>
-                      <div className="text-gray-500 text-[10px]">{reads}R / {writes}W</div>
-                    </div>
-                    <div>
-                      <div className="text-white font-bold text-sm font-mono">{totalKB.toFixed(1)}</div>
-                      <div className="text-gray-500 text-[10px]">KB total</div>
-                    </div>
-                    <div>
-                      <div className="text-emerald-400 font-bold text-sm font-mono">{avgLat.toFixed(1)}ms</div>
-                      <div className="text-gray-500 text-[10px]">avg latency</div>
-                    </div>
-                  </div>
-                )
-              })()}
             </div>
           </motion.div>
         )}
