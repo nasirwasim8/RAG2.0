@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DDN INFINIA RAG Pipeline - Architecture Documentation</title>
+    <style>
+        :root {
+            --black: #000000;
+            --dark: #1a1a1a;
+            --gray: #666666;
+            --gray-light: #999999;
+            --gray-lighter: #cccccc;
+            --gray-lightest: #e5e5e5;
+            --white: #ffffff;
+            --off-white: #f5f5f5;
+            --ddn-red: #ED2738;
+            --ddn-dark: #C41E3A;
+            --nvidia-green: #76B900;
+            --nvidia-dark: #5A9000;
+            --aws-orange: #FF9900;
+            --blue: #2563eb;
+            --purple: #7c3aed;
+            --green: #059669;
+            --cyan: #0891b2;
+            --gold: #FFD700;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: var(--white); color: var(--black); line-height: 1.6; }
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+
+        header { background: var(--black); color: var(--white); padding: 40px 20px; text-align: center; }
+        header h1 { font-size: 2.5rem; margin-bottom: 10px; font-weight: 300; letter-spacing: 2px; }
+        header p { opacity: 0.8; font-size: 1.1rem; }
+        .header-badges { display: flex; justify-content: center; gap: 15px; margin-top: 20px; flex-wrap: wrap; }
+        .header-badge { display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; border-radius: 20px; font-size: 0.85rem; font-weight: 500; }
+        .header-badge.ddn { background: rgba(237, 39, 56, 0.2); border: 1px solid var(--ddn-red); color: var(--ddn-red); }
+        .header-badge.nvidia { background: rgba(118, 185, 0, 0.2); border: 1px solid var(--nvidia-green); color: var(--nvidia-green); }
+        .header-badge.aws { background: rgba(255, 153, 0, 0.2); border: 1px solid var(--aws-orange); color: var(--aws-orange); }
+
+        nav { background: var(--dark); padding: 15px; position: sticky; top: 0; z-index: 100; }
+        nav ul { list-style: none; display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; }
+        nav a { color: var(--white); text-decoration: none; padding: 8px 16px; border: 1px solid var(--gray); transition: all 0.3s; font-size: 0.85rem; }
+        nav a:hover { background: var(--white); color: var(--black); }
+        nav a.ddn:hover { background: var(--ddn-red); border-color: var(--ddn-red); }
+        nav a.nvidia:hover { background: var(--nvidia-green); border-color: var(--nvidia-green); }
+
+        section { margin: 30px 0; background: var(--white); border: 1px solid var(--black); overflow: hidden; }
+        .section-header { background: var(--black); color: var(--white); padding: 20px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+        .section-header h2 { font-size: 1.3rem; font-weight: 400; letter-spacing: 1px; }
+        .section-header .toggle { font-size: 1.2rem; transition: transform 0.3s; }
+        .section-header.collapsed .toggle { transform: rotate(-90deg); }
+        .section-content { padding: 25px; }
+        .section-content.hidden { display: none; }
+
+        h3 { color: var(--black); margin: 25px 0 15px; padding-bottom: 8px; border-bottom: 2px solid var(--black); font-weight: 600; }
+        h4 { color: var(--black); margin: 20px 0 10px; font-weight: 600; }
+
+        .full-diagram { background: var(--black); color: var(--white); padding: 25px; font-family: 'Courier New', monospace; font-size: 13px; overflow-x: auto; white-space: pre; line-height: 1.5; margin: 20px 0; border-radius: 4px; }
+        .full-diagram .ddn { color: var(--ddn-red); }
+        .full-diagram .nvidia { color: var(--nvidia-green); }
+        .full-diagram .aws { color: var(--aws-orange); }
+        .full-diagram .gold { color: var(--gold); }
+        .full-diagram .comment { color: var(--gray-light); font-style: italic; }
+
+        .entity-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 20px; margin: 20px 0; }
+        .entity-card { background: var(--white); border: 2px solid var(--black); padding: 0; overflow: hidden; }
+        .entity-card-header { background: var(--black); color: var(--white); padding: 12px 15px; font-weight: 600; display: flex; justify-content: space-between; align-items: center; }
+        .entity-card-header .scope-badge { background: var(--white); color: var(--black); padding: 2px 8px; font-size: 0.75rem; font-family: monospace; }
+        .entity-card-body { padding: 15px; }
+        .entity-card-body ul { list-style: none; margin: 0; }
+        .entity-card-body li { padding: 5px 0; border-bottom: 1px solid var(--gray-lightest); display: flex; justify-content: space-between; }
+        .entity-card-body li:last-child { border-bottom: none; }
+        .entity-card-body .attr-name { font-weight: 500; }
+        .entity-card-body .attr-type { color: var(--gray); font-size: 0.85rem; font-family: monospace; }
+
+        .connections { margin-top: 10px; padding-top: 10px; border-top: 2px solid var(--gray-lightest); }
+        .connections-title { font-size: 0.8rem; color: var(--gray); text-transform: uppercase; margin-bottom: 8px; }
+        .connection-item { display: inline-block; background: var(--off-white); border: 1px solid var(--gray-lighter); padding: 3px 10px; margin: 2px; font-size: 0.85rem; }
+        .connection-arrow { color: var(--gray); }
+
+        .ddn-card { border-color: var(--ddn-red); }
+        .ddn-card .entity-card-header { background: var(--ddn-red); }
+        .nvidia-card { border-color: var(--nvidia-green); }
+        .nvidia-card .entity-card-header { background: var(--nvidia-green); }
+        .aws-card { border-color: var(--aws-orange); }
+        .aws-card .entity-card-header { background: var(--aws-orange); color: var(--black); }
+        .aws-card .entity-card-header .scope-badge { color: var(--aws-orange); }
+        .blue-card { border-color: var(--blue); }
+        .blue-card .entity-card-header { background: var(--blue); }
+
+        .note-box { background: var(--off-white); border-left: 4px solid var(--black); padding: 15px; margin: 15px 0; }
+        .note-box.ddn { border-left-color: var(--ddn-red); }
+        .note-box.nvidia { border-left-color: var(--nvidia-green); }
+
+        table { width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 0.9rem; }
+        th, td { padding: 12px; text-align: left; border: 1px solid var(--black); }
+        th { background: var(--black); color: var(--white); font-weight: 500; }
+        tr:nth-child(even) { background: var(--off-white); }
+        code { background: var(--off-white); padding: 2px 6px; border: 1px solid var(--gray-lighter); font-family: 'Courier New', monospace; font-size: 0.85em; }
+
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 20px 0; }
+        .stat-card { background: var(--off-white); border: 1px solid var(--gray-lighter); padding: 20px; text-align: center; }
+        .stat-card .value { font-size: 2.5rem; font-weight: bold; font-family: monospace; }
+        .stat-card .value.ddn { color: var(--ddn-red); }
+        .stat-card .value.nvidia { color: var(--nvidia-green); }
+        .stat-card .label { font-size: 0.85rem; color: var(--gray); margin-top: 5px; }
+
+        .flow-step { display: flex; align-items: flex-start; gap: 15px; margin: 15px 0; padding: 15px; background: var(--off-white); border-left: 4px solid var(--black); }
+        .flow-step .number { background: var(--black); color: var(--white); width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; flex-shrink: 0; }
+        .flow-step.ddn .number { background: var(--ddn-red); }
+        .flow-step.nvidia .number { background: var(--nvidia-green); }
+        .flow-step .content { flex: 1; }
+        .flow-step .title { font-weight: 600; margin-bottom: 5px; }
+        .flow-step .description { color: var(--gray); font-size: 0.9rem; }
+
+        footer { background: var(--black); color: var(--white); text-align: center; padding: 30px; margin-top: 40px; }
+
+        @media (max-width: 768px) {
+            header h1 { font-size: 1.8rem; }
+            .full-diagram { font-size: 11px; padding: 15px; }
+            .entity-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>DDN INFINIA RAG Pipeline</h1>
+        <p>Enterprise RAG Performance Benchmark Architecture</p>
+        <p style="margin-top:10px;font-size:0.9rem;opacity:0.6;">DDN INFINIA + NVIDIA NeMo + AWS S3 Comparison</p>
+        <div class="header-badges">
+            <span class="header-badge ddn">DDN INFINIA</span>
+            <span class="header-badge nvidia">NVIDIA NeMo</span>
+            <span class="header-badge aws">AWS S3</span>
+        </div>
+    </header>
+
+    <nav>
+        <ul>
+            <li><a href="#overview">Overview</a></li>
+            <li><a href="#architecture" class="nvidia">Architecture</a></li>
+            <li><a href="#data-flow">Data Flow</a></li>
+            <li><a href="#storage" class="ddn">Storage Layer</a></li>
+            <li><a href="#ai-pipeline" class="nvidia">AI Pipeline</a></li>
+            <li><a href="#performance">Performance</a></li>
+            <li><a href="#api">API Reference</a></li>
+        </ul>
+    </nav>
+
+    <div class="container">
+
+        <!-- OVERVIEW SECTION -->
+        <section id="overview">
+            <div class="section-header" onclick="toggleSection(this)">
+                <h2>OVERVIEW</h2>
+                <span class="toggle">&#9660;</span>
+            </div>
+            <div class="section-content">
+                <p>This document describes the architecture of the DDN INFINIA RAG Performance Demo, a comprehensive benchmark system comparing DDN INFINIA high-performance storage against AWS S3 for enterprise RAG (Retrieval-Augmented Generation) applications.</p>
+
+                <h3>Key Performance Metrics</h3>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="value ddn">95%</div>
+                        <div class="label">Faster Upload vs AWS S3</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="value ddn">90%</div>
+                        <div class="label">Faster TTFB</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="value nvidia">&lt;100ms</div>
+                        <div class="label">End-to-End Response</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="value nvidia">70B</div>
+                        <div class="label">Nemotron LLM Parameters</div>
+                    </div>
+                </div>
+
+                <h3>Technology Stack</h3>
+                <div class="entity-grid">
+                    <div class="entity-card ddn-card">
+                        <div class="entity-card-header">
+                            Storage Layer
+                            <span class="scope-badge">DDN</span>
+                        </div>
+                        <div class="entity-card-body">
+                            <ul>
+                                <li><span class="attr-name">DDN INFINIA</span><span class="attr-type">Primary Storage</span></li>
+                                <li><span class="attr-name">AWS S3</span><span class="attr-type">Comparison Target</span></li>
+                                <li><span class="attr-name">FAISS</span><span class="attr-type">Vector Index</span></li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="entity-card nvidia-card">
+                        <div class="entity-card-header">
+                            AI Pipeline
+                            <span class="scope-badge">NVIDIA</span>
+                        </div>
+                        <div class="entity-card-body">
+                            <ul>
+                                <li><span class="attr-name">NV-Ingest</span><span class="attr-type">Document Processing</span></li>
+                                <li><span class="attr-name">NeMo Reranker</span><span class="attr-type">Result Optimization</span></li>
+                                <li><span class="attr-name">NeMo Guardrails</span><span class="attr-type">Content Safety</span></li>
+                                <li><span class="attr-name">Nemotron 70B</span><span class="attr-type">LLM Generation</span></li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="entity-card blue-card">
+                        <div class="entity-card-header">
+                            Application Layer
+                            <span class="scope-badge">STACK</span>
+                        </div>
+                        <div class="entity-card-body">
+                            <ul>
+                                <li><span class="attr-name">FastAPI</span><span class="attr-type">Backend Framework</span></li>
+                                <li><span class="attr-name">React + TypeScript</span><span class="attr-type">Frontend</span></li>
+                                <li><span class="attr-name">SentenceTransformers</span><span class="attr-type">Embeddings</span></li>
+                                <li><span class="attr-name">Boto3</span><span class="attr-type">S3 SDK</span></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ARCHITECTURE DIAGRAM -->
+        <section id="architecture">
+            <div class="section-header" onclick="toggleSection(this)" style="background: var(--nvidia-green);">
+                <h2>COMPLETE ARCHITECTURE</h2>
+                <span class="toggle">&#9660;</span>
+            </div>
+            <div class="section-content">
+                <h3>RAG Pipeline Architecture Diagram</h3>
+                <div class="full-diagram">
+USER REQUEST ─────────────────────────────────────────────────────────────────────────────────────────────
+│
+│                                    ┌─────────────────────────────────────────────────────────────────┐
+│                                    │                    <span class="nvidia">NVIDIA NeMo PLATFORM</span>                         │
+│                                    └─────────────────────────────────────────────────────────────────┘
+│
+├── DOCUMENT UPLOAD ─────────────────────────────────────────────────────────────────────────────────────
+│   │
+│   │   ┌────────────────┐      ┌────────────────────┐      ┌────────────────────────────────────────┐
+│   └──►│   Multi-Modal  │─────►│  <span class="nvidia">NVIDIA NV-Ingest</span>  │─────►│            DUAL STORAGE               │
+│       │    Upload      │      │                    │      │  ┌─────────────────┬────────────────┐  │
+│       │                │      │  • PDF Extraction  │      │  │  <span class="ddn">DDN INFINIA</span>     │    <span class="aws">AWS S3</span>      │  │
+│       │  PDF, DOCX,    │      │  • Text Chunking   │      │  │  Colorado DC    │  N. Virginia   │  │
+│       │  XLSX, PPTX,   │      │  • Semantic Split  │      │  │                 │                │  │
+│       │  CSV, TXT      │      │  • Auto-fallback   │      │  │  <span class="gold">95% FASTER</span>     │   Baseline    │  │
+│       └────────────────┘      └────────────────────┘      │  └─────────────────┴────────────────┘  │
+│                                                           └────────────────────────────────────────┘
+│                                                                           │
+│                                                                           ▼
+│                                                           ┌────────────────────────────────────────┐
+│                                                           │        VECTOR EMBEDDING                │
+│                                                           │                                        │
+│                                                           │   SentenceTransformers (all-MiniLM)   │
+│                                                           │   384-dimensional vectors             │
+│                                                           └────────────────────────────────────────┘
+│                                                                           │
+│                                                                           ▼
+│                                                           ┌────────────────────────────────────────┐
+│                                                           │          FAISS INDEX                   │
+│                                                           │                                        │
+│                                                           │   IndexFlatL2 • Similarity Search     │
+│                                                           │   Scalable to millions of vectors     │
+│                                                           └────────────────────────────────────────┘
+│
+├── USER QUERY ──────────────────────────────────────────────────────────────────────────────────────────
+│   │
+│   │   ┌────────────────┐      ┌────────────────────┐      ┌────────────────────────────────────────┐
+│   └──►│  Query Input   │─────►│   Vector Search    │─────►│     <span class="nvidia">NVIDIA NeMo RERANKER</span>              │
+│       │                │      │                    │      │                                        │
+│       │  Natural       │      │  FAISS k-NN        │      │  • Score & Reorder Results            │
+│       │  Language      │      │  Top-K Retrieval   │      │  • Improve Relevance                  │
+│       │  Question      │      │  (default: k=5)    │      │  • Semantic Matching                  │
+│       └────────────────┘      └────────────────────┘      └────────────────────────────────────────┘
+│                                                                           │
+│                                                                           ▼
+│                                                           ┌────────────────────────────────────────┐
+│                                                           │     <span class="nvidia">NVIDIA NeMo GUARDRAILS</span>             │
+│                                                           │                                        │
+│                                                           │  • Input Validation                   │
+│                                                           │  • Content Safety Filtering           │
+│                                                           │  • Output Sanitization                │
+│                                                           └────────────────────────────────────────┘
+│                                                                           │
+│                                                                           ▼
+│                                                           ┌────────────────────────────────────────┐
+│                                                           │     <span class="nvidia">NVIDIA NEMOTRON 70B</span>                 │
+│                                                           │                                        │
+│                                                           │  • Context-Aware Generation           │
+│                                                           │  • Retrieved Chunks as Context        │
+│                                                           │  • <span class="gold">SUB-100MS RESPONSE TIME</span>             │
+│                                                           └────────────────────────────────────────┘
+│                                                                           │
+│                                                                           ▼
+│                                                           ┌────────────────────────────────────────┐
+│                                                           │         RESPONSE + METRICS            │
+│                                                           │                                        │
+│                                                           │  • Generated Answer                   │
+│                                                           │  • Retrieved Chunks                   │
+│                                                           │  • Performance Comparison:            │
+│                                                           │    - <span class="ddn">DDN INFINIA TTFB</span>                   │
+│                                                           │    - <span class="aws">AWS S3 TTFB</span>                        │
+│                                                           │    - Winner & Speedup Factor          │
+│                                                           └────────────────────────────────────────┘
+│
+└── RESPONSE TO USER ────────────────────────────────────────────────────────────────────────────────────
+
+
+LEGEND ──────────────────────────────────────────────────────────────────────────────────────────────────
+<span class="ddn">■</span> DDN INFINIA Storage         <span class="nvidia">■</span> NVIDIA NeMo AI Platform         <span class="aws">■</span> AWS S3 (Comparison)
+<span class="gold">■</span> Performance Highlight        <span class="comment">// Comments in gray italics</span></div>
+
+                <h3>Component Relationships</h3>
+                <table>
+                    <tr>
+                        <th>Source Component</th>
+                        <th>Relationship</th>
+                        <th>Target Component</th>
+                        <th>Data Flow</th>
+                    </tr>
+                    <tr><td>Document Upload</td><td>sends to</td><td>NV-Ingest</td><td>Raw files (PDF, DOCX, etc.)</td></tr>
+                    <tr><td>NV-Ingest</td><td>produces</td><td>Text Chunks</td><td>Semantically split text</td></tr>
+                    <tr><td>Text Chunks</td><td>stored in</td><td>DDN INFINIA + AWS S3</td><td>Parallel dual write</td></tr>
+                    <tr><td>Text Chunks</td><td>embedded by</td><td>SentenceTransformers</td><td>384-dim vectors</td></tr>
+                    <tr><td>Vector Embeddings</td><td>indexed in</td><td>FAISS</td><td>IndexFlatL2</td></tr>
+                    <tr><td>User Query</td><td>searches</td><td>FAISS Index</td><td>Top-K similar chunks</td></tr>
+                    <tr><td>Retrieved Chunks</td><td>reranked by</td><td>NeMo Reranker</td><td>Scored & reordered</td></tr>
+                    <tr><td>Reranked Chunks</td><td>filtered by</td><td>NeMo Guardrails</td><td>Safety checked</td></tr>
+                    <tr><td>Safe Context</td><td>generates via</td><td>Nemotron 70B</td><td>Final response</td></tr>
+                </table>
+            </div>
+        </section>
+
+        <!-- DATA FLOW -->
+        <section id="data-flow">
+            <div class="section-header" onclick="toggleSection(this)">
+                <h2>DATA FLOW PIPELINE</h2>
+                <span class="toggle">&#9660;</span>
+            </div>
+            <div class="section-content">
+                <h3>Document Ingestion Flow</h3>
+
+                <div class="flow-step nvidia">
+                    <div class="number">1</div>
+                    <div class="content">
+                        <div class="title">Document Upload</div>
+                        <div class="description">User uploads documents via drag-and-drop or file selection. Supported formats: PDF, DOCX, XLSX, PPTX, CSV, TXT</div>
+                    </div>
+                </div>
+
+                <div class="flow-step nvidia">
+                    <div class="number">2</div>
+                    <div class="content">
+                        <div class="title">NVIDIA NV-Ingest Processing</div>
+                        <div class="description">Documents are processed through NVIDIA NV-Ingest for intelligent text extraction and semantic chunking. Auto-fallback to standard processing if NV-Ingest unavailable.</div>
+                    </div>
+                </div>
+
+                <div class="flow-step ddn">
+                    <div class="number">3</div>
+                    <div class="content">
+                        <div class="title">Dual Storage Write</div>
+                        <div class="description">Chunks are written simultaneously to both DDN INFINIA (Colorado DC) and AWS S3 (N. Virginia) with timing metrics captured for each operation.</div>
+                    </div>
+                </div>
+
+                <div class="flow-step">
+                    <div class="number">4</div>
+                    <div class="content">
+                        <div class="title">Vector Embedding</div>
+                        <div class="description">Each chunk is converted to a 384-dimensional vector using SentenceTransformers (all-MiniLM-L6-v2 model).</div>
+                    </div>
+                </div>
+
+                <div class="flow-step">
+                    <div class="number">5</div>
+                    <div class="content">
+                        <div class="title">FAISS Indexing</div>
+                        <div class="description">Vectors are added to the FAISS IndexFlatL2 index for efficient similarity search during queries.</div>
+                    </div>
+                </div>
+
+                <h3>Query Processing Flow</h3>
+                <div class="full-diagram">
+Query Flow Timeline
+═══════════════════════════════════════════════════════════════════════════════════════════════════════
+
+T0: User Query ────────────────────────────────────────────────────────────────────────────────────────
+    │
+    └──► "What are the key findings in the research paper?"
+
+T1: Vector Search (FAISS) ─────────────────────────────────────────────────────────────────────────────
+    │
+    ├── Query embedding: SentenceTransformer.encode(query) → [0.12, -0.34, 0.56, ...]
+    └── FAISS search: index.search(query_vector, k=5) → Top 5 similar chunks
+
+T2: Chunk Retrieval ─────────────────────────────────────────────────────────────────────────────────── <span class="gold">TIMING MEASURED</span>
+    │
+    ├── <span class="ddn">DDN INFINIA</span>: Retrieve chunks → TTFB recorded
+    └── <span class="aws">AWS S3</span>: Retrieve chunks → TTFB recorded (parallel)
+
+T3: NeMo Reranking ────────────────────────────────────────────────────────────────────────────────────
+    │
+    └── Score each chunk against query → Reorder by relevance score
+
+T4: NeMo Guardrails ───────────────────────────────────────────────────────────────────────────────────
+    │
+    ├── Input validation: Check query safety
+    └── Context check: Verify retrieved content appropriateness
+
+T5: LLM Generation (Nemotron 70B) ─────────────────────────────────────────────────────────────────────
+    │
+    ├── Context: Top reranked chunks
+    ├── System prompt: RAG assistant instructions
+    └── Output: Generated response
+
+T6: Response Assembly ─────────────────────────────────────────────────────────────────────────────────
+    │
+    └── {
+          "response": "Based on the documents...",
+          "retrieved_chunks": [...],
+          "provider_times": {
+            "ddn_infinia": 0.023,  <span class="comment">// seconds</span>
+            "aws": 0.187           <span class="comment">// seconds</span>
+          },
+          "fastest_provider": "<span class="ddn">DDN INFINIA</span>",
+          "total_time_ms": 89
+        }</div>
+            </div>
+        </section>
+
+        <!-- STORAGE LAYER -->
+        <section id="storage">
+            <div class="section-header" onclick="toggleSection(this)" style="background: var(--ddn-red);">
+                <h2>STORAGE LAYER - DDN INFINIA vs AWS S3</h2>
+                <span class="toggle">&#9660;</span>
+            </div>
+            <div class="section-content">
+                <div class="note-box ddn">
+                    <strong>Key Advantage:</strong> DDN INFINIA delivers 95% faster upload speeds and 90% faster TTFB compared to AWS S3 for RAG workloads.
+                </div>
+
+                <h3>Storage Configuration</h3>
+                <div class="entity-grid">
+                    <div class="entity-card ddn-card">
+                        <div class="entity-card-header">
+                            DDN INFINIA
+                            <span class="scope-badge">PRIMARY</span>
+                        </div>
+                        <div class="entity-card-body">
+                            <ul>
+                                <li><span class="attr-name">Location</span><span class="attr-type">Colorado Data Center</span></li>
+                                <li><span class="attr-name">Protocol</span><span class="attr-type">S3-compatible</span></li>
+                                <li><span class="attr-name">Endpoint</span><span class="attr-type">DDN_S3_ENDPOINT</span></li>
+                                <li><span class="attr-name">Access Key</span><span class="attr-type">DDN_ACCESS_KEY</span></li>
+                                <li><span class="attr-name">Secret Key</span><span class="attr-type">DDN_SECRET_KEY</span></li>
+                                <li><span class="attr-name">Bucket</span><span class="attr-type">DDN_BUCKET</span></li>
+                            </ul>
+                            <div class="connections">
+                                <div class="connections-title">Performance:</div>
+                                <span class="connection-item">95% faster upload</span>
+                                <span class="connection-item">90% faster TTFB</span>
+                                <span class="connection-item">Enterprise-grade</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="entity-card aws-card">
+                        <div class="entity-card-header">
+                            AWS S3
+                            <span class="scope-badge">COMPARE</span>
+                        </div>
+                        <div class="entity-card-body">
+                            <ul>
+                                <li><span class="attr-name">Location</span><span class="attr-type">N. Virginia (us-east-1)</span></li>
+                                <li><span class="attr-name">Protocol</span><span class="attr-type">Native S3</span></li>
+                                <li><span class="attr-name">Access Key</span><span class="attr-type">AWS_ACCESS_KEY</span></li>
+                                <li><span class="attr-name">Secret Key</span><span class="attr-type">AWS_SECRET_KEY</span></li>
+                                <li><span class="attr-name">Region</span><span class="attr-type">AWS_REGION</span></li>
+                                <li><span class="attr-name">Bucket</span><span class="attr-type">AWS_BUCKET</span></li>
+                            </ul>
+                            <div class="connections">
+                                <div class="connections-title">Role:</div>
+                                <span class="connection-item">Benchmark baseline</span>
+                                <span class="connection-item">Cloud comparison</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <h3>Storage Operations</h3>
+                <table>
+                    <tr>
+                        <th>Operation</th>
+                        <th>DDN INFINIA</th>
+                        <th>AWS S3</th>
+                        <th>Metric Captured</th>
+                    </tr>
+                    <tr>
+                        <td><code>store_chunk()</code></td>
+                        <td>PUT to DDN bucket</td>
+                        <td>PUT to S3 bucket</td>
+                        <td>Upload time (ms)</td>
+                    </tr>
+                    <tr>
+                        <td><code>get_chunk()</code></td>
+                        <td>GET from DDN bucket</td>
+                        <td>GET from S3 bucket</td>
+                        <td>TTFB (ms)</td>
+                    </tr>
+                    <tr>
+                        <td><code>delete_chunk()</code></td>
+                        <td>DELETE from DDN bucket</td>
+                        <td>DELETE from S3 bucket</td>
+                        <td>Operation time (ms)</td>
+                    </tr>
+                    <tr>
+                        <td><code>list_chunks()</code></td>
+                        <td>LIST DDN bucket objects</td>
+                        <td>LIST S3 bucket objects</td>
+                        <td>List time (ms)</td>
+                    </tr>
+                </table>
+
+                <h3>Chunk Data Model</h3>
+                <div class="full-diagram">
+CHUNK OBJECT STRUCTURE
+══════════════════════════════════════════════════════════════════════════════════════════════════════
+
+Key Format: chunks/{chunk_id}.json
+
+{
+    "chunk_id": "abc123-def456-789xyz",    <span class="comment">// UUID v4</span>
+    "content": "The research findings...",  <span class="comment">// Text content (up to 512 tokens)</span>
+    "metadata": {
+        "source_file": "research_paper.pdf",
+        "page_number": 12,
+        "chunk_index": 5,
+        "total_chunks": 47,
+        "created_at": "2024-01-15T10:30:00Z",
+        "file_hash": "sha256:abc123..."
+    },
+    "embedding": [0.12, -0.34, 0.56, ...],  <span class="comment">// 384 dimensions</span>
+    "provider_times": {
+        "ddn_infinia": 0.023,               <span class="comment">// Storage write time (seconds)</span>
+        "aws": 0.187                         <span class="comment">// Storage write time (seconds)</span>
+    }
+}</div>
+            </div>
+        </section>
+
+        <!-- AI PIPELINE -->
+        <section id="ai-pipeline">
+            <div class="section-header" onclick="toggleSection(this)" style="background: var(--nvidia-green);">
+                <h2>NVIDIA AI PIPELINE</h2>
+                <span class="toggle">&#9660;</span>
+            </div>
+            <div class="section-content">
+                <div class="note-box nvidia">
+                    <strong>NVIDIA NeMo Platform:</strong> Comprehensive AI toolkit providing document processing, reranking, safety guardrails, and LLM generation.
+                </div>
+
+                <h3>Pipeline Components</h3>
+                <div class="entity-grid">
+                    <div class="entity-card nvidia-card">
+                        <div class="entity-card-header">
+                            NV-Ingest
+                            <span class="scope-badge">INGEST</span>
+                        </div>
+                        <div class="entity-card-body">
+                            <ul>
+                                <li><span class="attr-name">Function</span><span class="attr-type">Document Processing</span></li>
+                                <li><span class="attr-name">Input</span><span class="attr-type">PDF, DOCX, XLSX, PPTX</span></li>
+                                <li><span class="attr-name">Output</span><span class="attr-type">Semantic Chunks</span></li>
+                                <li><span class="attr-name">Fallback</span><span class="attr-type">Standard chunking</span></li>
+                            </ul>
+                            <div class="connections">
+                                <div class="connections-title">Features:</div>
+                                <span class="connection-item">PDF extraction</span>
+                                <span class="connection-item">Table recognition</span>
+                                <span class="connection-item">Smart splitting</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="entity-card nvidia-card">
+                        <div class="entity-card-header">
+                            NeMo Reranker
+                            <span class="scope-badge">RANK</span>
+                        </div>
+                        <div class="entity-card-body">
+                            <ul>
+                                <li><span class="attr-name">Function</span><span class="attr-type">Result Optimization</span></li>
+                                <li><span class="attr-name">Model</span><span class="attr-type">nvidia/nemo-reranker</span></li>
+                                <li><span class="attr-name">Input</span><span class="attr-type">Query + Chunks</span></li>
+                                <li><span class="attr-name">Output</span><span class="attr-type">Scored & Ordered</span></li>
+                            </ul>
+                            <div class="connections">
+                                <div class="connections-title">Benefits:</div>
+                                <span class="connection-item">Improved relevance</span>
+                                <span class="connection-item">Cross-encoder scoring</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="entity-card nvidia-card">
+                        <div class="entity-card-header">
+                            NeMo Guardrails
+                            <span class="scope-badge">SAFETY</span>
+                        </div>
+                        <div class="entity-card-body">
+                            <ul>
+                                <li><span class="attr-name">Function</span><span class="attr-type">Content Safety</span></li>
+                                <li><span class="attr-name">Input Check</span><span class="attr-type">Query validation</span></li>
+                                <li><span class="attr-name">Output Check</span><span class="attr-type">Response filtering</span></li>
+                            </ul>
+                            <div class="connections">
+                                <div class="connections-title">Protections:</div>
+                                <span class="connection-item">Harmful content</span>
+                                <span class="connection-item">PII detection</span>
+                                <span class="connection-item">Jailbreak prevention</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="entity-card nvidia-card">
+                        <div class="entity-card-header">
+                            Nemotron 70B
+                            <span class="scope-badge">LLM</span>
+                        </div>
+                        <div class="entity-card-body">
+                            <ul>
+                                <li><span class="attr-name">Model</span><span class="attr-type">nvidia/nemotron-70b</span></li>
+                                <li><span class="attr-name">Parameters</span><span class="attr-type">70 Billion</span></li>
+                                <li><span class="attr-name">Context Window</span><span class="attr-type">8K tokens</span></li>
+                                <li><span class="attr-name">Response Time</span><span class="attr-type">&lt;100ms</span></li>
+                            </ul>
+                            <div class="connections">
+                                <div class="connections-title">Capabilities:</div>
+                                <span class="connection-item">RAG generation</span>
+                                <span class="connection-item">Reasoning</span>
+                                <span class="connection-item">Summarization</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <h3>NVIDIA API Integration</h3>
+                <div class="full-diagram">
+NVIDIA NIM API Configuration
+══════════════════════════════════════════════════════════════════════════════════════════════════════
+
+Environment Variables:
+    NVIDIA_API_KEY          = "nvapi-..."           <span class="comment">// NVIDIA API authentication</span>
+    NVIDIA_NIM_ENDPOINT     = "https://integrate.api.nvidia.com/v1"
+
+Reranking Request:
+    POST /ranking
+    {
+        "model": "nvidia/nv-rerankqa-mistral-4b-v3",
+        "query": { "text": "user query" },
+        "passages": [
+            { "text": "chunk 1 content" },
+            { "text": "chunk 2 content" },
+            ...
+        ]
+    }
+
+Reranking Response:
+    {
+        "rankings": [
+            { "index": 2, "logit": 4.23 },    <span class="comment">// Highest relevance</span>
+            { "index": 0, "logit": 3.87 },
+            { "index": 1, "logit": 2.45 }
+        ]
+    }
+
+LLM Generation Request:
+    POST /chat/completions
+    {
+        "model": "nvidia/nemotron-70b-instruct",
+        "messages": [
+            { "role": "system", "content": "You are a RAG assistant..." },
+            { "role": "user", "content": "Context: [chunks]\n\nQuestion: [query]" }
+        ],
+        "temperature": 0.7,
+        "max_tokens": 1024
+    }</div>
+            </div>
+        </section>
+
+        <!-- PERFORMANCE -->
+        <section id="performance">
+            <div class="section-header" onclick="toggleSection(this)">
+                <h2>PERFORMANCE BENCHMARKS</h2>
+                <span class="toggle">&#9660;</span>
+            </div>
+            <div class="section-content">
+                <h3>Benchmark Methodology</h3>
+                <div class="entity-grid">
+                    <div class="entity-card">
+                        <div class="entity-card-header">
+                            Same Data
+                            <span class="scope-badge">FAIR</span>
+                        </div>
+                        <div class="entity-card-body">
+                            <p>Identical chunks stored to both DDN INFINIA and AWS S3 simultaneously during each upload operation.</p>
+                        </div>
+                    </div>
+                    <div class="entity-card">
+                        <div class="entity-card-header">
+                            Same Query
+                            <span class="scope-badge">FAIR</span>
+                        </div>
+                        <div class="entity-card-body">
+                            <p>Same retrieval query executed against both providers for fair comparison during each RAG request.</p>
+                        </div>
+                    </div>
+                    <div class="entity-card">
+                        <div class="entity-card-header">
+                            Real-Time Metrics
+                            <span class="scope-badge">FAIR</span>
+                        </div>
+                        <div class="entity-card-body">
+                            <p>TTFB and throughput measured during actual operations, not synthetic benchmarks.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <h3>Performance Metrics Captured</h3>
+                <table>
+                    <tr>
+                        <th>Metric</th>
+                        <th>Description</th>
+                        <th>Unit</th>
+                        <th>Typical DDN Value</th>
+                        <th>Typical AWS Value</th>
+                    </tr>
+                    <tr>
+                        <td>Upload TTFB</td>
+                        <td>Time to First Byte on PUT</td>
+                        <td>ms</td>
+                        <td>15-25</td>
+                        <td>150-300</td>
+                    </tr>
+                    <tr>
+                        <td>Retrieval TTFB</td>
+                        <td>Time to First Byte on GET</td>
+                        <td>ms</td>
+                        <td>20-40</td>
+                        <td>180-400</td>
+                    </tr>
+                    <tr>
+                        <td>Total Query Time</td>
+                        <td>End-to-end RAG response</td>
+                        <td>ms</td>
+                        <td>&lt;100</td>
+                        <td>200-500</td>
+                    </tr>
+                    <tr>
+                        <td>Throughput</td>
+                        <td>Concurrent operations/sec</td>
+                        <td>ops/s</td>
+                        <td>1000+</td>
+                        <td>100-200</td>
+                    </tr>
+                </table>
+
+                <h3>Response Data Structure</h3>
+                <div class="full-diagram">
+QueryResponse Model
+══════════════════════════════════════════════════════════════════════════════════════════════════════
+
+{
+    "response": string,              <span class="comment">// LLM-generated answer</span>
+    "retrieved_chunks": [
+        {
+            "content": string,       <span class="comment">// Chunk text content</span>
+            "distance": float,       <span class="comment">// FAISS L2 distance (lower = more similar)</span>
+            "rerank_score": float    <span class="comment">// NeMo reranker score (higher = more relevant)</span>
+        }
+    ],
+    "provider_times": {
+        "ddn_infinia": float,        <span class="comment">// DDN retrieval time in seconds</span>
+        "aws": float                 <span class="comment">// AWS retrieval time in seconds</span>
+    },
+    "fastest_provider": string,      <span class="comment">// "DDN INFINIA" or "AWS S3"</span>
+    "total_time_ms": float           <span class="comment">// Total query processing time</span>
+}</div>
+            </div>
+        </section>
+
+        <!-- API REFERENCE -->
+        <section id="api">
+            <div class="section-header" onclick="toggleSection(this)">
+                <h2>API REFERENCE</h2>
+                <span class="toggle">&#9660;</span>
+            </div>
+            <div class="section-content">
+                <h3>Backend Endpoints</h3>
+                <table>
+                    <tr>
+                        <th>Method</th>
+                        <th>Endpoint</th>
+                        <th>Description</th>
+                    </tr>
+                    <tr>
+                        <td><code>GET</code></td>
+                        <td><code>/health</code></td>
+                        <td>Health check with provider status</td>
+                    </tr>
+                    <tr>
+                        <td><code>POST</code></td>
+                        <td><code>/upload</code></td>
+                        <td>Upload single document</td>
+                    </tr>
+                    <tr>
+                        <td><code>POST</code></td>
+                        <td><code>/upload-multiple</code></td>
+                        <td>Upload multiple documents</td>
+                    </tr>
+                    <tr>
+                        <td><code>POST</code></td>
+                        <td><code>/query</code></td>
+                        <td>RAG query with performance metrics</td>
+                    </tr>
+                    <tr>
+                        <td><code>DELETE</code></td>
+                        <td><code>/clear</code></td>
+                        <td>Clear all chunks from storage</td>
+                    </tr>
+                    <tr>
+                        <td><code>GET</code></td>
+                        <td><code>/count</code></td>
+                        <td>Get total chunk count</td>
+                    </tr>
+                    <tr>
+                        <td><code>GET</code></td>
+                        <td><code>/models</code></td>
+                        <td>List available LLM models</td>
+                    </tr>
+                    <tr>
+                        <td><code>GET</code></td>
+                        <td><code>/benchmark</code></td>
+                        <td>Run storage performance benchmark</td>
+                    </tr>
+                </table>
+
+                <h3>Request/Response Examples</h3>
+                <div class="full-diagram">
+POST /query
+══════════════════════════════════════════════════════════════════════════════════════════════════════
+
+Request:
+{
+    "query": "What are the main conclusions of the research?",
+    "model": "nvidia/nvidia-nemotron-nano-9b-v2",
+    "top_k": 5,
+    "use_reranking": true,
+    "use_guardrails": true
+}
+
+Response:
+{
+    "response": "Based on the uploaded documents, the main conclusions are...",
+    "retrieved_chunks": [
+        {
+            "content": "The study found that performance improved by 40%...",
+            "distance": 0.234,
+            "rerank_score": 0.89
+        },
+        {
+            "content": "Key findings indicate significant reduction...",
+            "distance": 0.312,
+            "rerank_score": 0.76
+        }
+    ],
+    "provider_times": {
+        "ddn_infinia": 0.023,
+        "aws": 0.187
+    },
+    "fastest_provider": "<span class="ddn">DDN INFINIA</span>",
+    "total_time_ms": 87
+}</div>
+
+                <h3>Environment Configuration</h3>
+                <div class="full-diagram">
+Required Environment Variables
+══════════════════════════════════════════════════════════════════════════════════════════════════════
+
+<span class="comment"># DDN INFINIA Configuration</span>
+DDN_S3_ENDPOINT=https://your-ddn-endpoint.com
+DDN_ACCESS_KEY=your-ddn-access-key
+DDN_SECRET_KEY=your-ddn-secret-key
+DDN_BUCKET=your-ddn-bucket
+
+<span class="comment"># AWS S3 Configuration</span>
+AWS_ACCESS_KEY=your-aws-access-key
+AWS_SECRET_KEY=your-aws-secret-key
+AWS_REGION=us-east-1
+AWS_BUCKET=your-aws-bucket
+
+<span class="comment"># NVIDIA API Configuration</span>
+NVIDIA_API_KEY=nvapi-your-nvidia-api-key
+
+<span class="comment"># Optional Configuration</span>
+NV_INGEST_ENDPOINT=http://localhost:7670      <span class="comment"># For local NV-Ingest service</span>
+USE_NV_INGEST=true                            <span class="comment"># Enable/disable NV-Ingest</span></div>
+            </div>
+        </section>
+
+    </div>
+
+    <footer>
+        <p>DDN INFINIA RAG Pipeline - Architecture Documentation</p>
+        <p style="margin-top:10px;font-size:0.85rem;">Powered by DDN INFINIA + NVIDIA NeMo</p>
+        <div style="margin-top:15px;display:flex;justify-content:center;gap:20px;">
+            <span style="color:var(--ddn-red);">DDN INFINIA</span>
+            <span style="color:var(--nvidia-green);">NVIDIA NeMo</span>
+            <span style="color:var(--aws-orange);">AWS S3</span>
+        </div>
+    </footer>
+
+    <script>
+        function toggleSection(header) {
+            header.classList.toggle('collapsed');
+            const content = header.nextElementSibling;
+            content.classList.toggle('hidden');
+        }
+    </script>
+</body>
+</html>

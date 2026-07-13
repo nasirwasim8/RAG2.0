@@ -1,0 +1,105 @@
+# =============================================================================
+# Credentials — NEVER commit
+# =============================================================================
+backend/data/storage_config.json
+backend/data/*.json
+!backend/data/*.example.json
+backend/.env
+backend/.env.*
+!backend/.env.example
+.env
+.env.*
+!.env.example
+
+# =============================================================================
+# Python
+# =============================================================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+backend/venv/
+venv/
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+htmlcoverage/
+.coverage
+
+# =============================================================================
+# Node / Frontend
+# =============================================================================
+frontend/node_modules/
+node_modules/
+frontend/dist/
+dist/
+frontend/.next/
+.cache/
+*.tsbuildinfo
+
+# =============================================================================
+# Logs & runtime
+# =============================================================================
+logs/
+*.log
+*.log.*
+pm2-*.json
+
+# =============================================================================
+# OS / Editor
+# =============================================================================
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# =============================================================================
+# Internal / one-off scripts — not needed for deployment
+# =============================================================================
+apply_aws_sync_patch.py
+apply_aws_sync_patch.sh
+apply_s3_toggle_patch.py
+diagnose_s3.py
+test_aws_upload.py
+test_nvidia_api_speed.py
+push_to_server.ps1
+create_deployment_package.sh
+deploy_wsl.sh
+NEXT_SESSION.md
+bucket_monitor.py.backup
+*.backup
+*.tmp
+*.bak
+
+# =============================================================================
+# WSL/OCI-specific ecosystem configs (redundant — deploy.sh generates one)
+# =============================================================================
+ecosystem.hpod.config.js
+ecosystem.oci.config.js
+
+# =============================================================================
+# Large binary files
+# =============================================================================
+*.pdf
+*.zip
+*.tar.gz
+*.tar
+*.mp4
+*.mp3
+*.mov
+*.avi
+video/
+
+# =============================================================================
+# Local assistant context
+# =============================================================================
+.gemini/

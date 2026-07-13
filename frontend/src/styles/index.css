@@ -1,0 +1,1447 @@
+/* ==========================================================================
+   DDN RAG v2 - Design System
+
+   This file contains all design tokens and component styles.
+   Modify the CSS variables below to update the entire app's appearance.
+   ========================================================================== */
+
+/* Font Imports */
+@import url('https://use.typekit.net/ijn4thf.css'); /* Articulat CF */
+@import url('https://cdn.jsdelivr.net/npm/geist@1.2.0/dist/fonts/geist-mono/style.min.css');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ==========================================================================
+   DESIGN TOKENS - Modify these to change the entire app
+   ========================================================================== */
+
+:root {
+  /* -------------------------------------------------------------------------
+     TYPOGRAPHY
+     Using Articulat CF (DDN brand font) for body, Geist Mono for code
+     ------------------------------------------------------------------------- */
+  --font-sans: 'articulat-cf', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'Geist Mono', 'SF Mono', 'Fira Code', 'Consolas', monospace;
+
+  /* -------------------------------------------------------------------------
+     DDN BRAND COLORS
+     Primary brand red with variants
+     ------------------------------------------------------------------------- */
+  --ddn-red: #ED2738;           /* Primary brand color - brand-600 */
+  --ddn-red-hover: #C60F1F;     /* Hover state - brand-700 */
+  --ddn-red-light: #FFE0E3;     /* Light background - brand-100 */
+  --ddn-red-dark: #A4101D;      /* Dark variant - brand-800 */
+
+  /* -------------------------------------------------------------------------
+     NVIDIA COLORS (Use ONLY for NVIDIA-related elements)
+     ------------------------------------------------------------------------- */
+  --nvidia-green: #76B900;
+  --nvidia-green-light: #E8F5D0;
+
+  /* -------------------------------------------------------------------------
+     NEUTRAL COLORS (DDN Black palette)
+     Based on DDN official neutral scale
+     ------------------------------------------------------------------------- */
+  --neutral-0: #FFFFFF;         /* White */
+  --neutral-25: #F5F6F8;        /* Lightest gray - backgrounds */
+  --neutral-50: #F8F7F7;        /* Very light gray */
+  --neutral-100: #F0EEEE;       /* Light gray - secondary backgrounds */
+  --neutral-200: #DDDADA;       /* Border light */
+  --neutral-300: #B7BABA;       /* Border default */
+  --neutral-400: #9C9A94;       /* Muted text */
+  --neutral-500: #807778;       /* Secondary text */
+  --neutral-600: #686162;       /* Body text */
+  --neutral-700: #494343;       /* Dark text */
+  --neutral-800: #3F3B3C;       /* Darker text */
+  --neutral-900: #201E1E;       /* Primary text / DDN Black */
+  --neutral-1000: #000000;      /* Pure black */
+
+  /* -------------------------------------------------------------------------
+     STATUS COLORS (DDN official)
+     ------------------------------------------------------------------------- */
+  --status-success: #00C280;
+  --status-success-subtle: #EAFFF5;
+  --status-error: #ED2738;      /* Same as brand */
+  --status-error-subtle: #FFE0E3;
+  --status-warning: #FF7600;
+  --status-warning-subtle: #FFE2A5;
+  --status-info: #1A81AF;
+  --status-info-subtle: #C2E5F5;
+
+  /* -------------------------------------------------------------------------
+     SEMANTIC ALIASES (For easy usage throughout the app)
+     ------------------------------------------------------------------------- */
+  /* Text */
+  --text-primary: var(--neutral-900);
+  --text-secondary: var(--neutral-600);
+  --text-muted: var(--neutral-400);
+  --text-inverted: var(--neutral-0);
+
+  /* Surfaces */
+  --surface-base: var(--neutral-0);
+  --surface-primary: var(--neutral-25);
+  --surface-secondary: var(--neutral-100);
+  --surface-tertiary: var(--neutral-200);
+  --surface-card: var(--neutral-0);
+  --surface-elevated: var(--neutral-0);
+
+  /* Borders */
+  --border-subtle: var(--neutral-200);
+  --border-default: var(--neutral-300);
+  --border-strong: var(--neutral-400);
+
+  /* Interactive */
+  --interactive-primary: var(--ddn-red);
+  --interactive-primary-hover: var(--ddn-red-hover);
+  --interactive-secondary: var(--neutral-100);
+  --interactive-secondary-hover: var(--neutral-200);
+
+  /* -------------------------------------------------------------------------
+     SPACING (8px grid system)
+     ------------------------------------------------------------------------- */
+  --space-1: 0.25rem;   /* 4px */
+  --space-2: 0.5rem;    /* 8px */
+  --space-3: 0.75rem;   /* 12px */
+  --space-4: 1rem;      /* 16px */
+  --space-5: 1.25rem;   /* 20px */
+  --space-6: 1.5rem;    /* 24px */
+  --space-8: 2rem;      /* 32px */
+  --space-10: 2.5rem;   /* 40px */
+  --space-12: 3rem;     /* 48px */
+  --space-16: 4rem;     /* 64px */
+
+  /* -------------------------------------------------------------------------
+     BORDER RADIUS
+     ------------------------------------------------------------------------- */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 24px;
+  --radius-full: 9999px;
+
+  /* -------------------------------------------------------------------------
+     SHADOWS
+     ------------------------------------------------------------------------- */
+  --shadow-xs: 0 1px 2px rgba(32, 30, 30, 0.05);
+  --shadow-sm: 0 2px 4px rgba(32, 30, 30, 0.05), 0 1px 2px rgba(32, 30, 30, 0.08);
+  --shadow-md: 0 4px 12px rgba(32, 30, 30, 0.08), 0 2px 4px rgba(32, 30, 30, 0.05);
+  --shadow-lg: 0 8px 24px rgba(32, 30, 30, 0.1), 0 4px 8px rgba(32, 30, 30, 0.06);
+  --shadow-xl: 0 16px 48px rgba(32, 30, 30, 0.12), 0 8px 16px rgba(32, 30, 30, 0.08);
+
+  /* -------------------------------------------------------------------------
+     MOTION SYSTEM - Premium Apple-style curves
+     ------------------------------------------------------------------------- */
+
+  /* Core easing curves */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);        /* Snappy deceleration - primary UI response */
+  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);      /* Smooth deceleration - natural arrival */
+  --ease-in-out-quart: cubic-bezier(0.76, 0, 0.24, 1);  /* Symmetric - state transitions */
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);     /* Subtle overshoot - playful feedback */
+  --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);          /* Material-like - general purpose */
+
+  /* Durations - consistent timing scale */
+  --duration-instant: 100ms;   /* Micro-interactions (opacity, color) */
+  --duration-fast: 150ms;      /* Small UI feedback (buttons, toggles) */
+  --duration-normal: 200ms;    /* Standard transitions (cards, dropdowns) */
+  --duration-moderate: 300ms;  /* Medium transitions (modals, panels) */
+  --duration-slow: 400ms;      /* Large transitions (page, overlays) */
+  --duration-slower: 500ms;    /* Emphasis animations */
+
+  /* Composed transitions */
+  --transition-fast: var(--duration-fast) var(--ease-out-expo);
+  --transition-default: var(--duration-normal) var(--ease-out-expo);
+  --transition-slow: var(--duration-moderate) var(--ease-out-quart);
+  --transition-emphasis: var(--duration-slow) var(--ease-spring);
+
+  /* -------------------------------------------------------------------------
+     LAYOUT
+     ------------------------------------------------------------------------- */
+  --nav-height: 64px;
+  --sidebar-width: 224px;
+  --container-max: 1280px;
+
+  /* -------------------------------------------------------------------------
+     THEME-SPECIFIC (Logo switching)
+     ------------------------------------------------------------------------- */
+  --logo-ddn: url('/logo-ddn.svg');
+  --nvidia-logo: url('/nvidia-logo-dark.png');
+}
+
+/* ==========================================================================
+   DARK THEME - DDN Black Edition
+   ========================================================================== */
+
+[data-theme="dark"] {
+  /* Text */
+  --text-primary: #F5F6F8;
+  --text-secondary: #B7BABA;
+  --text-muted: #807778;
+  --text-inverted: #201E1E;
+
+  /* Surfaces - Deep DDN blacks */
+  --surface-base: #0D0C0C;
+  --surface-primary: #141313;
+  --surface-secondary: #1C1A1A;
+  --surface-tertiary: #252222;
+  --surface-card: #1C1A1A;
+  --surface-elevated: #252222;
+
+  /* Borders */
+  --border-subtle: #2D2929;
+  --border-default: #3F3B3C;
+  --border-strong: #4D4848;
+
+  /* Interactive */
+  --interactive-secondary: #252222;
+  --interactive-secondary-hover: #2D2929;
+
+  /* Status colors - adjusted for dark theme */
+  --status-success-subtle: rgba(0, 194, 128, 0.15);
+  --status-error-subtle: rgba(237, 39, 56, 0.15);
+  --status-warning-subtle: rgba(255, 118, 0, 0.15);
+  --status-info-subtle: rgba(26, 129, 175, 0.15);
+
+  /* NVIDIA colors for dark theme */
+  --nvidia-green-light: rgba(118, 185, 0, 0.15);
+
+  /* DDN red light for dark theme */
+  --ddn-red-light: rgba(237, 39, 56, 0.15);
+
+  /* Shadows - softer in dark mode */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.2);
+  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.2), 0 1px 2px rgba(0, 0, 0, 0.25);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.25), 0 2px 4px rgba(0, 0, 0, 0.2);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.3), 0 4px 8px rgba(0, 0, 0, 0.2);
+  --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.4), 0 8px 16px rgba(0, 0, 0, 0.25);
+
+  /* Logo switching */
+  --nvidia-logo: url('/nvidia-logo-light.png');
+}
+
+/* ==========================================================================
+   BASE STYLES
+   ========================================================================== */
+
+* {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+html {
+  /* Removed scroll-behavior: smooth - causes scroll lag on many devices */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  /* Optimize scrolling performance */
+  -webkit-overflow-scrolling: touch;
+}
+
+html::-webkit-scrollbar {
+  display: none;
+}
+
+body {
+  font-family: var(--font-sans);
+  font-feature-settings: 'kern' 1, 'liga' 1, 'calt' 1;
+  color: var(--text-primary);
+  background-color: var(--surface-primary);
+  overflow-x: hidden;
+}
+
+::selection {
+  background: var(--ddn-red-light);
+  color: var(--ddn-red);
+}
+
+:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(237, 39, 56, 0.2);
+}
+
+/* ==========================================================================
+   TAILWIND LAYERS
+   ========================================================================== */
+
+@layer base {
+  /* Typography */
+  .font-sans { font-family: var(--font-sans); }
+  .font-mono { font-family: var(--font-mono); }
+
+  /* Text Colors - Primary palette */
+  .text-primary { color: var(--text-primary); }
+  .text-secondary { color: var(--text-secondary); }
+  .text-muted { color: var(--text-muted); }
+  .text-inverted { color: var(--text-inverted); }
+
+  /* Text Colors - Brand */
+  .text-brand { color: var(--ddn-red); }
+  .text-brand-hover { color: var(--ddn-red-hover); }
+
+  /* Text Colors - Status */
+  .text-success { color: var(--status-success); }
+  .text-error { color: var(--status-error); }
+  .text-warning { color: var(--status-warning); }
+  .text-info { color: var(--status-info); }
+
+  /* Text Colors - NVIDIA (use sparingly) */
+  .text-nvidia { color: var(--nvidia-green); }
+
+  /* Background Colors - Surfaces */
+  .bg-base { background-color: var(--surface-base); }
+  .bg-primary { background-color: var(--surface-primary); }
+  .bg-secondary { background-color: var(--surface-secondary); }
+  .bg-tertiary { background-color: var(--surface-tertiary); }
+  .bg-card { background-color: var(--surface-card); }
+
+  /* Background Colors - Brand */
+  .bg-brand { background-color: var(--ddn-red); }
+  .bg-brand-light { background-color: var(--ddn-red-light); }
+  .bg-brand-hover { background-color: var(--ddn-red-hover); }
+
+  /* Background Colors - Status */
+  .bg-success { background-color: var(--status-success); }
+  .bg-success-subtle { background-color: var(--status-success-subtle); }
+  .bg-error { background-color: var(--status-error); }
+  .bg-error-subtle { background-color: var(--status-error-subtle); }
+  .bg-warning { background-color: var(--status-warning); }
+  .bg-warning-subtle { background-color: var(--status-warning-subtle); }
+  .bg-info { background-color: var(--status-info); }
+  .bg-info-subtle { background-color: var(--status-info-subtle); }
+
+  /* Background Colors - NVIDIA (use sparingly) */
+  .bg-nvidia { background-color: var(--nvidia-green); }
+  .bg-nvidia-light { background-color: var(--nvidia-green-light); }
+
+  /* Border Colors */
+  .border-subtle { border-color: var(--border-subtle); }
+  .border-default { border-color: var(--border-default); }
+  .border-strong { border-color: var(--border-strong); }
+  .border-brand { border-color: var(--ddn-red); }
+  .border-nvidia { border-color: var(--nvidia-green); }
+}
+
+/* -------------------------------------------------------------------------
+   DARK MODE OVERRIDES FOR TAILWIND NEUTRAL COLORS
+   These make Tailwind's text-neutral-* classes theme-aware
+   ------------------------------------------------------------------------- */
+[data-theme="dark"] .text-neutral-900,
+[data-theme="dark"] .text-neutral-800 {
+  color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .text-neutral-700,
+[data-theme="dark"] .text-neutral-600 {
+  color: var(--text-secondary) !important;
+}
+
+[data-theme="dark"] .text-neutral-500,
+[data-theme="dark"] .text-neutral-400 {
+  color: var(--text-muted) !important;
+}
+
+[data-theme="dark"] .border-neutral-200,
+[data-theme="dark"] .border-neutral-300 {
+  border-color: var(--border-subtle) !important;
+}
+
+[data-theme="dark"] .bg-neutral-100,
+[data-theme="dark"] .bg-neutral-200 {
+  background-color: var(--surface-secondary) !important;
+}
+
+[data-theme="dark"] .bg-white {
+  background-color: var(--surface-card) !important;
+  color: var(--text-primary) !important;
+}
+
+@layer components {
+  /* -------------------------------------------------------------------------
+     NAVIGATION
+     ------------------------------------------------------------------------- */
+  .nav-bar {
+    height: var(--nav-height);
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: saturate(180%) blur(20px);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
+    border-bottom: 1px solid var(--border-subtle);
+  }
+
+  .nav-bar.scrolled {
+    background: rgba(255, 255, 255, 0.98);
+    box-shadow: var(--shadow-sm);
+  }
+
+  [data-theme="dark"] .nav-bar {
+    background: rgba(13, 12, 12, 0.95);
+  }
+
+  [data-theme="dark"] .nav-bar.scrolled {
+    background: rgba(20, 19, 19, 0.98);
+  }
+
+  /* Theme Toggle Button - Minimal */
+  .theme-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px;
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    opacity: 0.4;
+    transition: opacity var(--duration-fast) var(--ease-out-expo);
+  }
+
+  .theme-toggle:hover {
+    opacity: 0.8;
+  }
+
+  .theme-toggle:active {
+    opacity: 0.6;
+  }
+
+  /* -------------------------------------------------------------------------
+     CARDS - Apple-style with subtle depth
+     ------------------------------------------------------------------------- */
+  .card {
+    background: var(--surface-card);
+    border-radius: var(--radius-xl);
+    border: 1px solid var(--border-subtle);
+    box-shadow:
+      0 1px 2px rgba(0, 0, 0, 0.04),
+      0 2px 4px rgba(0, 0, 0, 0.02);
+  }
+
+  .card-elevated {
+    background: var(--surface-card);
+    border-radius: var(--radius-xl);
+    border: 1px solid rgba(0, 0, 0, 0.04);
+    box-shadow:
+      0 2px 8px rgba(0, 0, 0, 0.04),
+      0 4px 16px rgba(0, 0, 0, 0.04),
+      0 8px 32px rgba(0, 0, 0, 0.02);
+  }
+
+  .card-inset {
+    background: var(--surface-secondary);
+    border-radius: var(--radius-lg);
+    border: 1px solid transparent;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.04);
+  }
+
+  .card-hover {
+    @apply card;
+    transition: transform var(--duration-normal) var(--ease-out-expo),
+                box-shadow var(--duration-normal) var(--ease-out-expo),
+                border-color var(--duration-normal) var(--ease-out-expo);
+    will-change: transform;
+  }
+
+  .card-hover:hover {
+    box-shadow:
+      0 4px 12px rgba(0, 0, 0, 0.06),
+      0 8px 24px rgba(0, 0, 0, 0.04);
+    transform: translateY(-2px) translateZ(0);
+    border-color: var(--border-default);
+  }
+
+  .card-hover:active {
+    transform: translateY(0) translateZ(0);
+    transition-duration: var(--duration-instant);
+  }
+
+  /* Card with colored accent */
+  .card-accent-ddn {
+    border-top: 3px solid var(--ddn-red);
+  }
+
+  .card-accent-nvidia {
+    border-top: 3px solid var(--nvidia-green);
+  }
+
+  /* Dark theme card adjustments */
+  [data-theme="dark"] .card,
+  [data-theme="dark"] .card-elevated {
+    border-color: var(--border-subtle);
+  }
+
+  [data-theme="dark"] .card-elevated {
+    box-shadow:
+      0 2px 8px rgba(0, 0, 0, 0.2),
+      0 4px 16px rgba(0, 0, 0, 0.15);
+  }
+
+  [data-theme="dark"] .card-hover:hover {
+    box-shadow:
+      0 4px 12px rgba(0, 0, 0, 0.25),
+      0 8px 24px rgba(0, 0, 0, 0.2);
+  }
+
+  /* -------------------------------------------------------------------------
+     BUTTONS
+     ------------------------------------------------------------------------- */
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    padding: var(--space-3) var(--space-6);
+    background: var(--ddn-red);
+    color: var(--text-inverted);
+    font-weight: 600;
+    font-size: 14px;
+    border-radius: var(--radius-sm);
+    transition: transform var(--duration-fast) var(--ease-out-expo),
+                background-color var(--duration-fast) var(--ease-out-expo),
+                box-shadow var(--duration-fast) var(--ease-out-expo);
+    will-change: transform;
+  }
+
+  .btn-primary:hover {
+    background: var(--ddn-red-hover);
+    transform: translateY(-1px) translateZ(0);
+    box-shadow: var(--shadow-md);
+  }
+
+  .btn-primary:active {
+    transform: translateY(0) scale(0.98) translateZ(0);
+    transition-duration: var(--duration-instant);
+  }
+
+  .btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    padding: var(--space-3) var(--space-6);
+    background: var(--surface-card);
+    color: var(--text-primary);
+    font-weight: 500;
+    font-size: 14px;
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-sm);
+    transition: transform var(--duration-fast) var(--ease-out-expo),
+                background-color var(--duration-fast) var(--ease-out-expo),
+                border-color var(--duration-fast) var(--ease-out-expo);
+  }
+
+  .btn-secondary:hover {
+    background: var(--surface-secondary);
+    border-color: var(--border-strong);
+  }
+
+  .btn-secondary:active {
+    transform: scale(0.98) translateZ(0);
+    transition-duration: var(--duration-instant);
+  }
+
+  .btn-secondary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  /* NVIDIA-specific button (for NVIDIA features only) */
+  .btn-nvidia {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    padding: var(--space-3) var(--space-6);
+    background: var(--nvidia-green);
+    color: var(--text-inverted);
+    font-weight: 600;
+    font-size: 14px;
+    border-radius: var(--radius-sm);
+    transition: all var(--transition-default);
+  }
+
+  .btn-nvidia:hover {
+    filter: brightness(0.9);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+  }
+
+  /* -------------------------------------------------------------------------
+     INPUTS - Apple-style with refined interactions
+     ------------------------------------------------------------------------- */
+  .input-field {
+    width: 100%;
+    padding: 12px 16px;
+    background: var(--surface-card);
+    border: 1.5px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    font-size: 15px;
+    font-weight: 400;
+    color: var(--text-primary);
+    transition: border-color var(--duration-fast) var(--ease-out-expo),
+                box-shadow var(--duration-fast) var(--ease-out-expo),
+                background-color var(--duration-fast) var(--ease-out-expo);
+  }
+
+  .input-field::placeholder {
+    color: var(--text-muted);
+    font-weight: 400;
+  }
+
+  .input-field:hover {
+    border-color: var(--border-default);
+    background: var(--surface-base);
+  }
+
+  .input-field:focus {
+    outline: none;
+    border-color: var(--ddn-red);
+    background: var(--surface-base);
+    box-shadow:
+      0 0 0 4px rgba(237, 39, 56, 0.08),
+      0 1px 2px rgba(0, 0, 0, 0.04);
+  }
+
+  /* Textarea variant */
+  textarea.input-field {
+    resize: vertical;
+    min-height: 80px;
+    line-height: 1.5;
+  }
+
+  /* Select styling */
+  .select-field {
+    appearance: none;
+    width: 100%;
+    padding: 12px 40px 12px 16px;
+    background: var(--surface-card);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%239C9A94' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    border: 1.5px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    font-size: 15px;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: border-color var(--duration-fast) var(--ease-out-expo),
+                box-shadow var(--duration-fast) var(--ease-out-expo);
+  }
+
+  .select-field:hover {
+    border-color: var(--border-default);
+  }
+
+  .select-field:focus {
+    outline: none;
+    border-color: var(--ddn-red);
+    box-shadow: 0 0 0 4px rgba(237, 39, 56, 0.08);
+  }
+
+  /* Checkbox styling */
+  .checkbox-field {
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border: 1.5px solid var(--border-default);
+    border-radius: var(--radius-sm);
+    background: var(--surface-card);
+    cursor: pointer;
+    transition: all var(--duration-fast) var(--ease-out-expo);
+    position: relative;
+  }
+
+  .checkbox-field:hover {
+    border-color: var(--border-strong);
+  }
+
+  .checkbox-field:checked {
+    background: var(--ddn-red);
+    border-color: var(--ddn-red);
+  }
+
+  .checkbox-field:checked::after {
+    content: '';
+    position: absolute;
+    left: 6px;
+    top: 2px;
+    width: 5px;
+    height: 10px;
+    border: solid white;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+  }
+
+  .checkbox-field:focus {
+    outline: none;
+    box-shadow: 0 0 0 4px rgba(237, 39, 56, 0.1);
+  }
+
+  /* Slider / Range input styling */
+  .slider-field {
+    appearance: none;
+    width: 100%;
+    height: 6px;
+    background: var(--surface-secondary);
+    border-radius: var(--radius-full);
+    cursor: pointer;
+    outline: none;
+  }
+
+  .slider-field::-webkit-slider-thumb {
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    background: white;
+    border: 2px solid var(--ddn-red);
+    border-radius: var(--radius-full);
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+    transition: all var(--duration-fast) var(--ease-out-expo);
+  }
+
+  .slider-field::-webkit-slider-thumb:hover {
+    transform: scale(1.1);
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
+  }
+
+  .slider-field::-webkit-slider-thumb:active {
+    transform: scale(0.95);
+  }
+
+  .slider-field::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    background: white;
+    border: 2px solid var(--ddn-red);
+    border-radius: var(--radius-full);
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  }
+
+  .slider-field:focus::-webkit-slider-thumb {
+    box-shadow: 0 0 0 4px rgba(237, 39, 56, 0.15), 0 2px 6px rgba(0, 0, 0, 0.15);
+  }
+
+  /* Input with icon */
+  .input-with-icon {
+    position: relative;
+  }
+
+  .input-with-icon .input-field {
+    padding-left: 44px;
+  }
+
+  .input-with-icon .input-icon {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+    pointer-events: none;
+  }
+
+  /* -------------------------------------------------------------------------
+     TABS
+     ------------------------------------------------------------------------- */
+  .tab-item {
+    position: relative;
+    padding: var(--space-3) var(--space-4);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    transition: color var(--transition-fast);
+    white-space: nowrap;
+  }
+
+  .tab-item:hover {
+    color: var(--text-primary);
+  }
+
+  .tab-item.active {
+    color: var(--text-primary);
+    font-weight: 600;
+  }
+
+  .tab-item.active::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: var(--space-4);
+    right: var(--space-4);
+    height: 2px;
+    background: var(--ddn-red);
+    border-radius: 1px;
+  }
+
+  /* -------------------------------------------------------------------------
+     BADGES & TAGS
+     ------------------------------------------------------------------------- */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    padding: var(--space-1) var(--space-3);
+    font-size: 12px;
+    font-weight: 500;
+    border-radius: var(--radius-full);
+  }
+
+  .badge-brand {
+    background: var(--ddn-red-light);
+    color: var(--ddn-red);
+  }
+
+  .badge-success {
+    background: var(--status-success-subtle);
+    color: var(--status-success);
+  }
+
+  .badge-error {
+    background: var(--status-error-subtle);
+    color: var(--status-error);
+  }
+
+  .badge-nvidia {
+    background: var(--nvidia-green-light);
+    color: var(--nvidia-green);
+  }
+
+  .badge-neutral {
+    background: var(--surface-secondary);
+    color: var(--text-secondary);
+  }
+
+  /* Logo tag */
+  .logo-tag {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: var(--ddn-red);
+    padding-left: var(--space-3);
+    margin-left: var(--space-3);
+    border-left: 1px solid var(--border-default);
+  }
+
+  /* -------------------------------------------------------------------------
+     TYPOGRAPHY HELPERS
+     ------------------------------------------------------------------------- */
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+  .stat-value {
+    font-family: var(--font-mono);
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+
+  .heading-1 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 1.1;
+    color: var(--text-primary);
+  }
+
+  .heading-2 {
+    font-size: 1.875rem;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+    color: var(--text-primary);
+  }
+
+  .heading-3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    line-height: 1.3;
+    color: var(--text-primary);
+  }
+
+  .body-text {
+    font-size: 0.875rem;
+    line-height: 1.6;
+    color: var(--text-secondary);
+  }
+
+  .caption {
+    font-size: 0.75rem;
+    line-height: 1.5;
+    color: var(--text-muted);
+  }
+
+  /* -------------------------------------------------------------------------
+     STATUS INDICATORS - Apple-style with pulse animation
+     ------------------------------------------------------------------------- */
+  .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .status-dot-success {
+    background: var(--status-success);
+    box-shadow: 0 0 0 2px rgba(0, 194, 128, 0.2);
+  }
+
+  .status-dot-error {
+    background: var(--status-error);
+    box-shadow: 0 0 0 2px rgba(237, 39, 56, 0.2);
+  }
+
+  .status-dot-warning {
+    background: var(--status-warning);
+    box-shadow: 0 0 0 2px rgba(255, 118, 0, 0.2);
+  }
+
+  .status-dot-pulse {
+    animation: statusPulse 2s var(--ease-in-out-quart) infinite;
+  }
+
+  @keyframes statusPulse {
+    0%, 100% { opacity: 1; box-shadow: 0 0 0 0 currentColor; }
+    50% { opacity: 0.7; box-shadow: 0 0 0 4px transparent; }
+  }
+
+  /* -------------------------------------------------------------------------
+     SECTION HEADERS - Apple-style page sections
+     ------------------------------------------------------------------------- */
+  .section-header {
+    margin-bottom: var(--space-6);
+  }
+
+  .section-header .section-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: var(--text-primary);
+    margin-bottom: var(--space-2);
+  }
+
+  .section-header .section-description {
+    font-size: 0.9375rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    max-width: 600px;
+  }
+
+  /* -------------------------------------------------------------------------
+     STAT CARDS - Apple-style metrics display
+     ------------------------------------------------------------------------- */
+  .stat-card {
+    padding: var(--space-5);
+    background: var(--surface-card);
+    border-radius: var(--radius-xl);
+    border: 1px solid var(--border-subtle);
+  }
+
+  .stat-card .stat-label {
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-muted);
+    margin-bottom: var(--space-2);
+  }
+
+  .stat-card .stat-value {
+    font-size: 2rem;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: var(--text-primary);
+    line-height: 1;
+  }
+
+  .stat-card .stat-unit {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    margin-left: var(--space-1);
+  }
+
+  .stat-card .stat-change {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-top: var(--space-2);
+    padding: 2px 8px;
+    border-radius: var(--radius-full);
+  }
+
+  .stat-card .stat-change.positive {
+    background: var(--status-success-subtle);
+    color: var(--status-success);
+  }
+
+  .stat-card .stat-change.negative {
+    background: var(--status-error-subtle);
+    color: var(--status-error);
+  }
+
+  /* -------------------------------------------------------------------------
+     DIVIDERS
+     ------------------------------------------------------------------------- */
+  .divider {
+    height: 1px;
+    background: var(--border-subtle);
+    margin: var(--space-6) 0;
+  }
+
+  .divider-vertical {
+    width: 1px;
+    height: 100%;
+    background: var(--border-subtle);
+  }
+
+  /* -------------------------------------------------------------------------
+     STATUS BANNER - Contextual info bars
+     ------------------------------------------------------------------------- */
+  .status-banner {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-4) var(--space-5);
+    border-radius: var(--radius-lg);
+    font-size: 0.875rem;
+  }
+
+  .status-banner-success {
+    background: linear-gradient(135deg, var(--status-success-subtle), rgba(0, 194, 128, 0.05));
+    border: 1px solid rgba(0, 194, 128, 0.2);
+    color: var(--status-success);
+  }
+
+  .status-banner-nvidia {
+    background: linear-gradient(135deg, var(--nvidia-green-light), rgba(118, 185, 0, 0.05));
+    border: 1px solid rgba(118, 185, 0, 0.2);
+    color: var(--nvidia-green);
+  }
+
+  .status-banner-ddn {
+    background: linear-gradient(135deg, var(--ddn-red-light), rgba(237, 39, 56, 0.05));
+    border: 1px solid rgba(237, 39, 56, 0.2);
+    color: var(--ddn-red);
+  }
+
+  .status-banner-neutral {
+    background: var(--surface-secondary);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-secondary);
+  }
+
+  /* -------------------------------------------------------------------------
+     TOOLBAR - Action bar for forms/sections
+     ------------------------------------------------------------------------- */
+  .toolbar {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-4);
+    background: var(--surface-secondary);
+    border-radius: var(--radius-lg);
+  }
+
+  .toolbar-divider {
+    width: 1px;
+    height: 24px;
+    background: var(--border-default);
+  }
+
+  /* -------------------------------------------------------------------------
+     DROPZONE - File upload area
+     ------------------------------------------------------------------------- */
+  .dropzone {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-12) var(--space-8);
+    border: 2px dashed var(--border-default);
+    border-radius: var(--radius-xl);
+    background: var(--surface-base);
+    cursor: pointer;
+    transition: all var(--duration-normal) var(--ease-out-expo);
+  }
+
+  .dropzone:hover {
+    border-color: var(--ddn-red);
+    background: rgba(237, 39, 56, 0.02);
+  }
+
+  .dropzone.active {
+    border-color: var(--ddn-red);
+    background: var(--ddn-red-light);
+    border-style: solid;
+  }
+
+  [data-theme="dark"] .dropzone:hover {
+    background: rgba(237, 39, 56, 0.08);
+  }
+
+  .dropzone-icon {
+    width: 48px;
+    height: 48px;
+    color: var(--text-muted);
+    margin-bottom: var(--space-4);
+  }
+
+  .dropzone-text {
+    font-size: 0.9375rem;
+    color: var(--text-secondary);
+    text-align: center;
+  }
+
+  .dropzone-hint {
+    font-size: 0.8125rem;
+    color: var(--text-muted);
+    margin-top: var(--space-2);
+  }
+
+  /* -------------------------------------------------------------------------
+     CODE/MONO BLOCKS
+     ------------------------------------------------------------------------- */
+  .code-block {
+    font-family: var(--font-mono);
+    font-size: 0.8125rem;
+    line-height: 1.6;
+    padding: var(--space-4);
+    background: var(--neutral-900);
+    color: var(--neutral-100);
+    border-radius: var(--radius-lg);
+    overflow-x: auto;
+  }
+
+  .code-inline {
+    font-family: var(--font-mono);
+    font-size: 0.875em;
+    padding: 2px 6px;
+    background: var(--surface-secondary);
+    border-radius: var(--radius-xs);
+    color: var(--ddn-red);
+  }
+
+  /* Results/output display */
+  .output-block {
+    font-family: var(--font-mono);
+    font-size: 0.8125rem;
+    line-height: 1.7;
+    padding: var(--space-5);
+    background: var(--surface-secondary);
+    border-radius: var(--radius-lg);
+    color: var(--text-primary);
+    white-space: pre-wrap;
+    overflow-x: auto;
+  }
+
+  .status-dot-nvidia {
+    background: var(--nvidia-green);
+  }
+
+  /* -------------------------------------------------------------------------
+     GLASSMORPHISM
+     ------------------------------------------------------------------------- */
+  .glass {
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+  }
+
+  .glass-dark {
+    background: rgba(32, 30, 30, 0.8);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+  }
+
+  /* Dark theme glass */
+  [data-theme="dark"] .glass {
+    background: rgba(20, 19, 19, 0.85);
+  }
+
+  /* -------------------------------------------------------------------------
+     SCROLLBAR
+     ------------------------------------------------------------------------- */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* -------------------------------------------------------------------------
+     ABOUT PAGE - Full bleed layout with optimized scrolling
+     ------------------------------------------------------------------------- */
+  .about-page {
+    /* Prevent horizontal overflow from orbs */
+    overflow-x: hidden;
+    /* Ensure smooth GPU-accelerated scrolling */
+    transform: translateZ(0);
+  }
+
+  .about-page section {
+    /* Each section is a new stacking context for better paint performance */
+    isolation: isolate;
+  }
+}
+
+@layer utilities {
+  /* Letter spacing */
+  .tracking-tight { letter-spacing: -0.02em; }
+  .tracking-tighter { letter-spacing: -0.03em; }
+
+  /* -------------------------------------------------------------------------
+     GPU ACCELERATION & PERFORMANCE
+     ------------------------------------------------------------------------- */
+  .gpu-accelerated {
+    transform: translateZ(0);
+    will-change: transform;
+    backface-visibility: hidden;
+  }
+
+  .gpu-accelerated-opacity {
+    will-change: transform, opacity;
+    backface-visibility: hidden;
+  }
+
+  /* Optimized for animations - use sparingly, remove after animation */
+  .will-animate {
+    will-change: transform, opacity;
+  }
+
+  /* -------------------------------------------------------------------------
+     PREMIUM MOTION UTILITIES
+     ------------------------------------------------------------------------- */
+
+  /* Hover lift - subtle elevation on hover */
+  .hover-lift {
+    transition: transform var(--duration-normal) var(--ease-out-expo),
+                box-shadow var(--duration-normal) var(--ease-out-expo);
+  }
+
+  .hover-lift:hover {
+    transform: translateY(-2px) translateZ(0);
+  }
+
+  .hover-lift:active {
+    transform: translateY(0) translateZ(0);
+    transition-duration: var(--duration-instant);
+  }
+
+  /* Hover scale - gentle grow on hover */
+  .hover-scale {
+    transition: transform var(--duration-normal) var(--ease-out-expo);
+  }
+
+  .hover-scale:hover {
+    transform: scale(1.02) translateZ(0);
+  }
+
+  .hover-scale:active {
+    transform: scale(0.98) translateZ(0);
+    transition-duration: var(--duration-instant);
+  }
+
+  /* Press effect - satisfying button press */
+  .press-effect {
+    transition: transform var(--duration-fast) var(--ease-out-expo);
+  }
+
+  .press-effect:active {
+    transform: scale(0.97) translateZ(0);
+  }
+
+  /* Smooth fade */
+  .fade-transition {
+    transition: opacity var(--duration-normal) var(--ease-out-quart);
+  }
+
+  /* -------------------------------------------------------------------------
+     ENTRANCE ANIMATIONS (GPU-optimized)
+     ------------------------------------------------------------------------- */
+  .animate-in {
+    animation: animateIn var(--duration-moderate) var(--ease-out-expo) forwards;
+  }
+
+  .animate-in-fast {
+    animation: animateIn var(--duration-normal) var(--ease-out-expo) forwards;
+  }
+
+  .animate-in-slow {
+    animation: animateIn var(--duration-slow) var(--ease-out-quart) forwards;
+  }
+
+  @keyframes animateIn {
+    from {
+      opacity: 0;
+      transform: translateY(8px) translateZ(0);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) translateZ(0);
+    }
+  }
+
+  /* Fade in scale - for modals/cards */
+  .animate-scale-in {
+    animation: scaleIn var(--duration-moderate) var(--ease-out-expo) forwards;
+  }
+
+  @keyframes scaleIn {
+    from {
+      opacity: 0;
+      transform: scale(0.95) translateZ(0);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1) translateZ(0);
+    }
+  }
+
+  /* Stagger children - add to parent */
+  .stagger-children > * {
+    opacity: 0;
+    animation: animateIn var(--duration-moderate) var(--ease-out-expo) forwards;
+  }
+
+  .stagger-children > *:nth-child(1) { animation-delay: 0ms; }
+  .stagger-children > *:nth-child(2) { animation-delay: 50ms; }
+  .stagger-children > *:nth-child(3) { animation-delay: 100ms; }
+  .stagger-children > *:nth-child(4) { animation-delay: 150ms; }
+  .stagger-children > *:nth-child(5) { animation-delay: 200ms; }
+  .stagger-children > *:nth-child(6) { animation-delay: 250ms; }
+
+  /* -------------------------------------------------------------------------
+     AMBIENT ANIMATIONS (60fps optimized)
+     ------------------------------------------------------------------------- */
+
+  /* Gentle float - for background elements */
+  .animate-float {
+    animation: gentleFloat 6s var(--ease-in-out-quart) infinite;
+    will-change: transform;
+  }
+
+  @keyframes gentleFloat {
+    0%, 100% {
+      transform: translate3d(0, 0, 0);
+    }
+    50% {
+      transform: translate3d(15px, -10px, 0);
+    }
+  }
+
+  /* Soft pulse - for status indicators */
+  .animate-pulse-soft {
+    animation: softPulse 2s var(--ease-in-out-quart) infinite;
+  }
+
+  @keyframes softPulse {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.7;
+    }
+  }
+
+  /* Glow pulse - for highlights */
+  .animate-glow {
+    animation: glowPulse 2s var(--ease-in-out-quart) infinite;
+  }
+
+  @keyframes glowPulse {
+    0%, 100% {
+      filter: brightness(1);
+    }
+    50% {
+      filter: brightness(1.1);
+    }
+  }
+
+  /* -------------------------------------------------------------------------
+     REDUCED MOTION SUPPORT
+     ------------------------------------------------------------------------- */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+
+    .animate-float,
+    .animate-pulse-soft,
+    .animate-glow {
+      animation: none !important;
+    }
+
+    .hover-lift:hover,
+    .hover-scale:hover {
+      transform: none !important;
+    }
+  }
+
+  /* -------------------------------------------------------------------------
+     PERFORMANCE TIERS - Lower fidelity for weaker devices
+     ------------------------------------------------------------------------- */
+
+  /* Tier B: Reduced blur for mid-range devices */
+  @media (max-width: 768px) {
+    .glass {
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+
+    .glass-dark {
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+  }
+
+  /* Tier C: Minimal effects for low-end devices / battery saver */
+  @media (max-width: 480px) {
+    .glass {
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      background: rgba(255, 255, 255, 0.9);
+    }
+
+    .glass-dark {
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      background: rgba(32, 30, 30, 0.9);
+    }
+
+    /* Disable ambient animations on small screens */
+    .animate-float {
+      animation: none;
+    }
+  }
+
+  /* Focus ring using brand color */
+  .focus-ring-brand:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(237, 39, 56, 0.2);
+  }
+
+  .focus-ring-nvidia:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(118, 185, 0, 0.2);
+  }
+}

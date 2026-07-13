@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>DDN × NVIDIA — GTC 2026 · Build.DDN:RAG</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f8fafc;height:100vh;overflow:hidden;display:flex;flex-direction:column}
+#nav{background:#fff;border-bottom:1px solid #e2e8f0;padding:0 28px;height:56px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;z-index:10}
+.brand{font-size:13px;font-weight:700;color:#ED2738;letter-spacing:.1em}
+#nav button.ctrl{border:none;background:transparent;cursor:pointer;padding:7px 12px;border-radius:6px;font-size:13px;color:#64748b;transition:background .15s}
+#nav button.ctrl:hover{background:#f1f5f9;color:#1e293b}
+#progress-bar{height:3px;background:linear-gradient(90deg,#ED2738,#76B900);transition:width .35s;flex-shrink:0}
+#stage{flex:1;overflow:hidden;position:relative;min-height:0}
+.slide{position:absolute;inset:0;display:none!important;animation:fi .3s ease;overflow-y:auto;overflow-x:hidden}
+.slide.active{display:flex!important}
+@keyframes fi{from{opacity:0;transform:translateX(24px)}to{opacity:1;transform:translateX(0)}}
+#dots{display:flex;gap:6px;align-items:center}
+#dots button{width:8px;height:8px;border-radius:50%;border:none;background:#e2e8f0;cursor:pointer;transition:all .2s;padding:0}
+#dots button.active{background:#ED2738;width:22px;border-radius:4px}
+#prev,#next{position:fixed;top:50%;transform:translateY(-50%);background:rgba(255,255,255,.92);backdrop-filter:blur(4px);border:1.5px solid #e2e8f0;border-radius:10px;width:38px;height:38px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:18px;color:#64748b;z-index:20;transition:all .15s;box-shadow:0 2px 8px rgba(0,0,0,.07)}
+#prev{left:10px}#next{right:10px}
+#prev:hover,#next:hover{background:#fff;color:#ED2738;box-shadow:0 4px 16px rgba(0,0,0,.1)}
+.p{padding:40px 56px 32px}
+.f{display:flex}.fc{flex-direction:column}.f1{flex:1}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+.eyebrow{font-size:10px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:#ED2738;margin-bottom:10px}
+h2{font-size:34px;font-weight:800;color:#0f172a;line-height:1.2;margin-bottom:6px}
+h2 em{font-style:normal;color:#ED2738}
+.lead{font-size:15px;color:#64748b;line-height:1.65;margin-bottom:18px}
+.callout{border-left:3px solid #ED2738;padding:12px 16px;background:#FFF8F8;border-radius:0 10px 10px 0;font-size:13px;color:#334155;line-height:1.6}
+.callout strong{color:#ED2738}
+.note{border-left:3px solid #76B900;padding:12px 16px;background:#F4FBEA;border-radius:0 10px 10px 0;font-size:13px;color:#334155;line-height:1.6}
+.note strong{color:#476B00}
+.card{border-radius:12px;padding:16px 18px}
+.dpanel{width:280px;min-width:280px;background:linear-gradient(160deg,#1e293b,#0f172a);display:flex;flex-direction:column;justify-content:space-between;padding:40px 32px}
+.pill{padding:5px 13px;border-radius:999px;font-size:12px;font-weight:700;display:inline-flex;align-items:center}
+.clock{font-size:10px;font-weight:700;color:#94a3b8;letter-spacing:.08em;text-transform:uppercase;padding:3px 10px;border-radius:999px;background:#f8fafc;border:1px solid #e2e8f0}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{text-align:left;padding:8px 12px;background:#f8fafc;color:#64748b;font-weight:700;font-size:10px;text-transform:uppercase;letter-spacing:.08em;border-bottom:1.5px solid #e2e8f0}
+td{padding:8px 12px;border-bottom:1px solid #f1f5f9;color:#334155}
+tr:last-child td{border-bottom:none}
+.tg{color:#76B900;font-weight:700}.tr{color:#ED2738;font-weight:600}
+.fstep{padding:7px 12px;border-radius:8px;font-size:11px;font-weight:600;color:#334155;background:#f1f5f9;border:1px solid #e2e8f0;white-space:nowrap}
+.farr{padding:0 5px;color:#94a3b8;font-size:13px;flex-shrink:0}
+#hint{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:rgba(15,23,42,.72);color:rgba(255,255,255,.8);font-size:12px;padding:7px 16px;border-radius:999px;backdrop-filter:blur(4px);pointer-events:none;z-index:30}
+</style>
+</head>
+<body>
+<div id="nav">
+  <div style="display:flex;align-items:center;gap:12px">
+    <span class="brand">BUILD.DDN:RAG · GTC 2026</span>
+    <span style="color:#cbd5e1">·</span>
+    <span style="font-size:12px;color:#94a3b8" id="stitle">Cover</span>
+  </div>
+  <div id="dots"></div>
+  <div style="display:flex;align-items:center;gap:8px">
+    <button class="ctrl" id="btn-fs">⛶ Fullscreen</button>
+    <span style="font-size:12px;color:#94a3b8" id="counter">1 / 7</span>
+  </div>
+</div>
+<div id="progress-bar" style="width:14.3%"></div>
+<div id="stage">
+
+<!-- ═══ S1 Cover ═══ -->
+<div class="slide active" id="s1" style="background:#fff">
+  <div class="dpanel">
+    <div>
+      <div style="display:flex;gap:6px;align-items:center;margin-bottom:24px">
+        <div style="width:8px;height:8px;border-radius:50%;background:#ED2738"></div>
+        <div style="width:8px;height:8px;border-radius:50%;background:#76B900"></div>
+        <span style="color:rgba(255,255,255,.3);font-size:10px;margin-left:6px;letter-spacing:.08em">GTC 2026</span>
+      </div>
+      <div style="font-size:32px;font-weight:900;color:#fff">DDN</div>
+      <div style="font-size:12px;font-weight:300;color:rgba(255,255,255,.3);letter-spacing:.06em;margin-bottom:14px">INFINIA</div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+        <div style="height:1px;flex:1;background:rgba(255,255,255,.1)"></div>
+        <span style="color:rgba(255,255,255,.2);font-size:11px">×</span>
+        <div style="height:1px;flex:1;background:rgba(255,255,255,.1)"></div>
+      </div>
+      <div style="font-size:20px;font-weight:900;color:#76B900;margin-bottom:3px">NVIDIA</div>
+      <div style="font-size:10px;color:rgba(255,255,255,.3);letter-spacing:.04em">NeMo Retriever Blueprint</div>
+      <div style="margin-top:24px;padding:14px;border-radius:10px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1)">
+        <div style="font-size:9px;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px">Live Benchmark · This Session</div>
+        <div style="display:flex;flex-direction:column;gap:7px">
+          <div style="display:flex;justify-content:space-between"><span style="font-size:11px;color:rgba(255,255,255,.4)">Object read · DDN</span><span style="font-size:12px;font-weight:800;color:#76B900">~14ms</span></div>
+          <div style="display:flex;justify-content:space-between"><span style="font-size:11px;color:rgba(255,255,255,.4)">Object read · S3</span><span style="font-size:12px;font-weight:800;color:#ED2738">~239ms</span></div>
+          <div style="display:flex;justify-content:space-between"><span style="font-size:11px;color:rgba(255,255,255,.4)">TTFB · DDN</span><span style="font-size:12px;font-weight:800;color:#76B900">~4.6ms</span></div>
+          <div style="display:flex;justify-content:space-between"><span style="font-size:11px;color:rgba(255,255,255,.4)">At 50 concurrent</span><span style="font-size:12px;font-weight:800;color:#76B900">~6ms flat</span></div>
+        </div>
+      </div>
+    </div>
+    <div style="font-size:10px;color:rgba(255,255,255,.2);line-height:1.7">15min session · 7 slides · live demo<br>DDN Theatre Booth · Build.DDN:RAG</div>
+  </div>
+  <div style="flex:1;display:flex;flex-direction:column;justify-content:center;padding:56px">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px">
+      <span class="pill" style="background:#FFF8E6;color:#F59E0B;border:1px solid rgba(245,158,11,.2)">✦ Technical Session · GTC 2026</span>
+      <span class="clock">~1 min</span>
+    </div>
+    <h1 style="font-size:58px;font-weight:900;line-height:1.1;color:#0f172a;margin-bottom:16px">The Real<br>Bottleneck in<br><em style="color:#ED2738">Enterprise RAG.</em></h1>
+    <p style="font-size:16px;color:#64748b;line-height:1.7;max-width:420px;margin-bottom:24px">RAG systems are often presented as a model problem. In reality, they are a data architecture problem as well — and retrieval happens at inference time.</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <span class="pill" style="background:#f8fafc;color:#475569;border:1px solid #e2e8f0">Retrieval at inference time</span>
+      <span class="pill" style="background:#f8fafc;color:#475569;border:1px solid #e2e8f0">Storage on the critical path</span>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ S2 The Problem ═══ -->
+<div class="slide f fc p" id="s2" style="background:#fff">
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
+    <div class="eyebrow">01 — The Bottleneck</div>
+    <span class="clock">~2 min</span>
+  </div>
+  <h2>The GPU Is Not Waiting for Compute. <em>It's Waiting for Data.</em></h2>
+  <p class="lead">In RAG, retrieval happens during inference — not offline. Every query performs multiple data operations before the model generates a single token.</p>
+  <div style="display:flex;gap:20px;flex:1">
+    <div style="flex:1;display:flex;flex-direction:column;gap:14px">
+      <div style="font-size:12px;font-weight:700;color:#334155;margin-bottom:4px">Typical RAG inference flow — every user query:</div>
+      <div style="display:flex;align-items:center;flex-wrap:wrap;gap:0">
+        <div class="fstep">Query</div><div class="farr">→</div>
+        <div class="fstep">Embed</div><div class="farr">→</div>
+        <div class="fstep">Vector Search</div><div class="farr">→</div>
+        <div class="fstep">Metadata</div><div class="farr">→</div>
+        <div class="fstep" style="background:#FFF0F1;border-color:rgba(237,39,56,.3);color:#ED2738">Object Retrieval ⚠</div><div class="farr">→</div>
+        <div class="fstep">Assemble</div><div class="farr">→</div>
+        <div class="fstep" style="background:#F4FBEA;border-color:rgba(118,185,0,.3);color:#476B00">LLM ✓</div>
+      </div>
+      <div class="callout">
+        Storage latency sits on the <strong>critical path to inference.</strong> Each query can require multiple reads: metadata objects, document chunks, embeddings, context windows.<br><br>
+        Even tens of milliseconds per operation accumulate quickly under concurrent load.
+      </div>
+      <div class="note" style="flex:1">
+        <strong>The consequence:</strong> To maintain the same response time target, you must either add more GPUs, accept longer response times, or reduce workload concurrency.<br><br>
+        That's an infrastructure problem, not a model problem.
+      </div>
+    </div>
+    <div style="width:240px;flex-shrink:0;display:flex;flex-direction:column;gap:12px">
+      <div class="card" style="background:#f8fafc;border:1px solid #e2e8f0">
+        <div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px">TTFT is driven by</div>
+        <div style="display:flex;flex-direction:column;gap:6px;font-size:12px;color:#475569">
+          <div>① Query embedding — GPU, fast</div>
+          <div>② Vector lookup — index-bound</div>
+          <div style="color:#ED2738;font-weight:600">③ Storage read — bottleneck</div>
+          <div>④ Prompt assembly — CPU, fast</div>
+          <div style="color:#76B900;font-weight:600">⑤ First token generated</div>
+        </div>
+      </div>
+      <div class="card" style="background:#f8fafc;border:1px solid #e2e8f0;flex:1">
+        <div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px">Common assumption vs reality</div>
+        <div style="font-size:12px;color:#64748b;margin-bottom:6px;font-style:italic">Most enterprise RAG deployments assume storage and compute are loosely coupled — a reasonable design for durability, but it introduces an additional network hop on every inference request.</div>
+        <div style="font-size:12px;color:#ED2738;font-weight:600">Under load, that hop becomes visible.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ S3 Benchmark Results ═══ -->
+<div class="slide f fc p" id="s3" style="background:#fff">
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
+    <div class="eyebrow">02 — Benchmark Results</div>
+    <span class="clock">~2 min</span>
+    <span style="font-size:10px;font-weight:700;padding:3px 10px;border-radius:999px;background:#F4FBEA;color:#476B00;border:1px solid rgba(118,185,0,.2);margin-left:auto">One variable changed: data access path</span>
+  </div>
+  <h2>Same Stack. Same Workload. <em>Different Storage Path.</em></h2>
+  <p class="lead">Controlled benchmark — identical application, model, queries. Only variable: DDN Infinia (co-located) vs Amazon S3 (remote API).</p>
+  <div style="display:flex;gap:18px;flex:1">
+    <!-- Left: big numbers -->
+    <div style="flex:1;display:flex;flex-direction:column;gap:14px">
+      <div class="g2" style="flex-shrink:0">
+        <div style="background:#F4FBEA;border:2px solid #76B900;border-radius:14px;padding:18px">
+          <div style="font-size:10px;font-weight:700;color:#76B900;text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px">DDN Infinia · Co-located</div>
+          <div style="font-size:50px;font-weight:900;color:#76B900;line-height:1">~14<span style="font-size:20px">ms</span></div>
+          <div style="font-size:11px;color:#64748b;margin-top:4px">object read latency</div>
+          <div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(118,185,0,.2)">
+            <div style="font-size:11px;color:#476B00;font-weight:600">TTFB: ~4.6ms</div>
+          </div>
+        </div>
+        <div style="background:#FFF0F1;border:2px solid rgba(237,39,56,.3);border-radius:14px;padding:18px">
+          <div style="font-size:10px;font-weight:700;color:#ED2738;text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px">Remote S3 · Cloud API</div>
+          <div style="font-size:50px;font-weight:900;color:#ED2738;line-height:1">~239<span style="font-size:20px">ms</span></div>
+          <div style="font-size:11px;color:#64748b;margin-top:4px">object read latency</div>
+          <div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(237,39,56,.15)">
+            <div style="font-size:11px;color:#ED2738;font-weight:600">TTFB: ~105ms</div>
+          </div>
+        </div>
+      </div>
+      <div class="callout" style="flex-shrink:0">
+        The difference is not surprising — remote object APIs introduce network and service layers. The important point is that this latency <strong>compounds across every query's retrieval pipeline.</strong>
+      </div>
+    </div>
+    <!-- Right: multi-size table -->
+    <div style="width:260px;flex-shrink:0;display:flex;flex-direction:column;gap:12px">
+      <div style="background:#f8fafc;border-radius:12px;border:1px solid #e2e8f0;overflow:hidden">
+        <div style="padding:10px 14px;font-size:11px;font-weight:700;color:#334155;border-bottom:1px solid #e2e8f0">Multi-size chunk benchmark</div>
+        <table>
+          <thead><tr><th>Chunk</th><th class="tg">DDN</th><th class="tr">S3</th></tr></thead>
+          <tbody>
+            <tr><td>1 KB</td><td class="tg">25.8ms</td><td class="tr">474ms</td></tr>
+            <tr><td>10 KB</td><td class="tg">35.2ms</td><td class="tr">392ms</td></tr>
+            <tr><td>100 KB</td><td class="tg">41.5ms</td><td class="tr">522ms</td></tr>
+            <tr><td>1 MB</td><td class="tg">75.8ms</td><td class="tr">1,485ms</td></tr>
+          </tbody>
+        </table>
+        <div style="padding:8px 12px;font-size:10px;color:#94a3b8;border-top:1px solid #f1f5f9">DDN maintains advantage across all chunk sizes.</div>
+      </div>
+      <div class="card" style="background:#f8fafc;border:1px solid #e2e8f0;flex:1">
+        <div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">Upload performance</div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:10px;color:#64748b;width:50px">DDN</span>
+            <div style="height:10px;width:16%;background:#76B900;border-radius:999px"></div>
+            <span style="font-size:11px;font-weight:700;color:#76B900">67.6ms</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:10px;color:#64748b;width:50px">S3</span>
+            <div style="height:10px;width:100%;background:#ED2738;border-radius:999px;opacity:.7"></div>
+            <span style="font-size:11px;font-weight:700;color:#ED2738">418.9ms</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ S4 Concurrent Load ═══ -->
+<div class="slide f fc p" id="s4" style="background:#fff">
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
+    <div class="eyebrow">03 — Behaviour Under Load</div>
+    <span class="clock">~2 min</span>
+    <span style="font-size:10px;color:#94a3b8;margin-left:auto">144 chunks · 50 concurrent readers · 7,200 total reads · Live AWS data</span>
+  </div>
+  <h2>The Most Important Result is at <em>Concurrent Load.</em></h2>
+  <p class="lead">At ~50 concurrent read requests, DDN Infinia remained stable at ~6ms. S3 climbed to 706ms. This is where retrieval latency becomes a <em>throughput problem</em>, not just a response time problem.</p>
+  <div style="display:flex;gap:18px;flex:1">
+    <!-- Chart -->
+    <div style="flex:1;background:#f8fafc;border-radius:14px;border:1px solid #e2e8f0;padding:16px;display:flex;flex-direction:column">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div style="font-size:12px;font-weight:700;color:#334155">Read latency vs concurrent requests</div>
+        <div style="display:flex;gap:14px;font-size:11px">
+          <span style="display:flex;align-items:center;gap:5px"><span style="display:inline-block;width:16px;height:2px;background:#ED2738;border-radius:2px"></span>DDN Infinia</span>
+          <span style="display:flex;align-items:center;gap:5px"><span style="display:inline-block;width:16px;height:2px;background:#94a3b8;border-radius:2px"></span>Remote S3</span>
+        </div>
+      </div>
+      <svg viewBox="0 0 540 150" style="flex:1;width:100%" preserveAspectRatio="none">
+        <line x1="40" y1="15" x2="520" y2="15" stroke="#e2e8f0" stroke-width="1"/>
+        <line x1="40" y1="50" x2="520" y2="50" stroke="#e2e8f0" stroke-width="1"/>
+        <line x1="40" y1="85" x2="520" y2="85" stroke="#e2e8f0" stroke-width="1"/>
+        <line x1="40" y1="120" x2="520" y2="120" stroke="#e2e8f0" stroke-width="1"/>
+        <text x="2" y="18" font-size="8" fill="#94a3b8">700ms</text>
+        <text x="2" y="53" font-size="8" fill="#94a3b8">400ms</text>
+        <text x="2" y="88" font-size="8" fill="#94a3b8">100ms</text>
+        <text x="2" y="123" font-size="8" fill="#94a3b8">0ms</text>
+        <!-- S3 area fill -->
+        <polygon points="70,115 160,108 260,96 360,78 450,45 520,18 520,140 70,140" fill="rgba(237,39,56,.06)"/>
+        <!-- S3 line -->
+        <polyline points="70,115 160,108 260,96 360,78 450,45 520,18" fill="none" stroke="#94a3b8" stroke-width="2.5" stroke-dasharray="6,3"/>
+        <!-- DDN line -->
+        <polyline points="70,118 160,118 260,119 360,118 450,119 520,118" fill="none" stroke="#ED2738" stroke-width="3"/>
+        <circle cx="520" cy="118" r="4" fill="#ED2738"/>
+        <circle cx="520" cy="18" r="4" fill="#94a3b8"/>
+        <!-- labels -->
+        <text x="420" y="12" font-size="9" fill="#94a3b8" font-weight="bold">S3: 706ms max</text>
+        <text x="380" y="111" font-size="9" fill="#ED2738" font-weight="bold">DDN: 6.3ms avg</text>
+        <!-- x axis -->
+        <text x="70" y="140" font-size="8" fill="#94a3b8" text-anchor="middle">1</text>
+        <text x="160" y="140" font-size="8" fill="#94a3b8" text-anchor="middle">5</text>
+        <text x="260" y="140" font-size="8" fill="#94a3b8" text-anchor="middle">10</text>
+        <text x="360" y="140" font-size="8" fill="#94a3b8" text-anchor="middle">20</text>
+        <text x="450" y="140" font-size="8" fill="#94a3b8" text-anchor="middle">50</text>
+        <text x="520" y="140" font-size="8" fill="#94a3b8" text-anchor="middle">concurrent →</text>
+      </svg>
+    </div>
+    <!-- Right panel -->
+    <div style="width:240px;flex-shrink:0;display:flex;flex-direction:column;gap:12px">
+      <div class="card" style="background:#F4FBEA;border:1.5px solid rgba(118,185,0,.25)">
+        <div style="font-size:10px;font-weight:700;color:#76B900;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">DDN · 50 readers</div>
+        <div style="font-size:28px;font-weight:900;color:#76B900">6.3ms</div>
+        <div style="font-size:11px;color:#64748b">avg · 11.3ms max · <em>stable</em></div>
+      </div>
+      <div class="card" style="background:#FFF0F1;border:1.5px solid rgba(237,39,56,.2)">
+        <div style="font-size:10px;font-weight:700;color:#ED2738;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">S3 · 50 readers</div>
+        <div style="font-size:28px;font-weight:900;color:#ED2738">439ms</div>
+        <div style="font-size:11px;color:#64748b">avg · 706ms max · <em>degrading</em></div>
+      </div>
+      <div class="callout" style="flex:1">
+        When latency increases under load, each request occupies GPU resources longer — reducing <strong>how many requests the system can process per GPU</strong> within the same time window.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ S5 LIVE DEMO ═══ -->
+<div class="slide" id="s5" style="background:linear-gradient(160deg,#0f172a,#1a2744);flex-direction:column;padding:28px 40px 24px">
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;flex-shrink:0">
+    <div style="display:flex;align-items:center;gap:8px">
+      <div style="width:10px;height:10px;border-radius:50%;background:#ED2738;animation:pulse 1.5s infinite"></div>
+      <span style="font-size:11px;font-weight:700;color:rgba(255,255,255,.4);letter-spacing:.12em;text-transform:uppercase">Demo · 3–4 min</span>
+    </div>
+    <div style="font-size:22px;font-weight:900;color:#fff;margin-left:4px">Recorded Demo</div>
+    <div style="font-size:14px;color:#76B900;font-weight:600;margin-left:4px">· Build.DDN:RAG</div>
+    <span id="demo-hint" style="margin-left:auto;font-size:11px;padding:5px 14px;border-radius:999px;background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);border:1px solid rgba(255,255,255,.1)">▶ Press Space or → to start Demo 1</span>
+  </div>
+  <!-- Two video cards — pre-loaded from video/ folder -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;flex:1;min-height:0">
+
+    <!-- Card 1: Indexing -->
+    <div id="vc1" style="background:rgba(255,255,255,.04);border:2px solid rgba(118,185,0,.45);border-radius:16px;display:flex;flex-direction:column;overflow:hidden;position:relative;transition:border-color .3s,box-shadow .3s">
+      <div style="padding:12px 16px;display:flex;align-items:center;gap:10px;flex-shrink:0;background:rgba(118,185,0,.08);border-bottom:1px solid rgba(118,185,0,.15)">
+        <div style="width:8px;height:8px;border-radius:50%;background:#76B900;flex-shrink:0"></div>
+        <div>
+          <div style="font-size:13px;font-weight:700;color:#fff">Demo 1 — Indexing</div>
+          <div style="font-size:10px;color:rgba(255,255,255,.4)">Document ingest · DDN 14ms vs S3 239ms write latency</div>
+        </div>
+        <span id="v1-badge" style="margin-left:auto;font-size:10px;padding:2px 10px;border-radius:999px;background:rgba(118,185,0,.15);color:#76B900;font-weight:700">STEP 1</span>
+      </div>
+      <div style="flex:1;position:relative;min-height:0">
+        <div id="v1-overlay" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:rgba(0,0,0,.55);z-index:2;transition:opacity .4s;pointer-events:none">
+          <div style="font-size:48px;opacity:.55">🎬</div>
+          <div style="font-size:13px;font-weight:700;color:rgba(255,255,255,.7)">Indexing Demo</div>
+          <div style="font-size:11px;color:rgba(255,255,255,.4)">Press Space or → to play</div>
+        </div>
+        <video id="v1" src="video/Indexing_1.mp4" style="width:100%;height:100%;object-fit:contain;background:#000;display:block" playsinline preload="auto"></video>
+      </div>
+      <div id="ctrl1" style="display:none;padding:7px 14px;background:rgba(0,0,0,.65);backdrop-filter:blur(4px);flex-shrink:0;align-items:center;gap:10px;border-top:1px solid rgba(255,255,255,.08)">
+        <button onclick="togglePlay('v1','pb1')" id="pb1" style="padding:4px 12px;border-radius:6px;border:none;background:#76B900;color:#fff;font-size:12px;font-weight:700;cursor:pointer">⏸ Pause</button>
+        <input type="range" id="seek1" style="flex:1;accent-color:#76B900;cursor:pointer" value="0" min="0" step="0.1" oninput="document.getElementById('v1').currentTime=this.value">
+        <span id="ts1" style="font-size:10px;color:rgba(255,255,255,.4);white-space:nowrap">0:00</span>
+      </div>
+    </div>
+
+    <!-- Card 2: Search -->
+    <div id="vc2" style="background:rgba(255,255,255,.03);border:2px solid rgba(59,130,246,.25);border-radius:16px;display:flex;flex-direction:column;overflow:hidden;position:relative;transition:all .4s;opacity:.5">
+      <div style="padding:12px 16px;display:flex;align-items:center;gap:10px;flex-shrink:0;background:rgba(59,130,246,.06);border-bottom:1px solid rgba(59,130,246,.12)">
+        <div style="width:8px;height:8px;border-radius:50%;background:#3B82F6;flex-shrink:0"></div>
+        <div>
+          <div style="font-size:13px;font-weight:700;color:#fff">Demo 2 — Search</div>
+          <div style="font-size:10px;color:rgba(255,255,255,.4)">RAG retrieval · concurrent load · TTFT comparison</div>
+        </div>
+        <span id="v2-badge" style="margin-left:auto;font-size:10px;padding:2px 10px;border-radius:999px;background:rgba(59,130,246,.12);color:#3B82F6;font-weight:700">STEP 2</span>
+      </div>
+      <div style="flex:1;position:relative;min-height:0">
+        <div id="v2-overlay" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:rgba(0,0,0,.62);z-index:2;transition:opacity .4s;pointer-events:none">
+          <div style="font-size:48px;opacity:.45">🔍</div>
+          <div style="font-size:13px;font-weight:700;color:rgba(255,255,255,.55)">Search Demo</div>
+          <div style="font-size:11px;color:rgba(255,255,255,.3)">Press Space again after Demo 1</div>
+        </div>
+        <video id="v2" src="video/Search_1.mp4" style="width:100%;height:100%;object-fit:contain;background:#000;display:block" playsinline preload="auto"></video>
+      </div>
+      <div id="ctrl2" style="display:none;padding:7px 14px;background:rgba(0,0,0,.65);backdrop-filter:blur(4px);flex-shrink:0;align-items:center;gap:10px;border-top:1px solid rgba(255,255,255,.08)">
+        <button onclick="togglePlay('v2','pb2')" id="pb2" style="padding:4px 12px;border-radius:6px;border:none;background:#3B82F6;color:#fff;font-size:12px;font-weight:700;cursor:pointer">⏸ Pause</button>
+        <input type="range" id="seek2" style="flex:1;accent-color:#3B82F6;cursor:pointer" value="0" min="0" step="0.1" oninput="document.getElementById('v2').currentTime=this.value">
+        <span id="ts2" style="font-size:10px;color:rgba(255,255,255,.4);white-space:nowrap">0:00</span>
+      </div>
+    </div>
+
+  </div>
+  <style>@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}</style>
+</div>
+
+<!-- ═══ S6 Implications + Economics ═══ -->
+<div class="slide f fc p" id="s6" style="background:#fff">
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
+    <div class="eyebrow">04 — What This Means</div>
+    <span class="clock">~2 min</span>
+  </div>
+  <h2>Improving the Data Layer Improves <em>the Entire System's Operating Envelope</em></h2>
+  <p class="lead">When retrieval latency becomes predictable and low, several improvements become possible — without changing a single line of model code.</p>
+  <div class="g3 f1">
+    <div class="card f fc" style="background:#ECFDF5;border:1.5px solid rgba(16,185,129,.2)">
+      <div style="font-size:12px;font-weight:700;color:#10B981;margin-bottom:8px">System Performance</div>
+      <div style="flex:1;display:flex;flex-direction:column;gap:8px;font-size:13px;color:#475569">
+        <div style="display:flex;align-items:flex-start;gap:8px"><span style="color:#10B981;flex-shrink:0">→</span><span>More consistent response times under load</span></div>
+        <div style="display:flex;align-items:flex-start;gap:8px"><span style="color:#10B981;flex-shrink:0">→</span><span>Higher throughput per GPU within the same SLO</span></div>
+        <div style="display:flex;align-items:flex-start;gap:8px"><span style="color:#10B981;flex-shrink:0">→</span><span>Latency stability as concurrency increases</span></div>
+        <div style="display:flex;align-items:flex-start;gap:8px"><span style="color:#10B981;flex-shrink:0">→</span><span>Better TTFT for interactive AI applications</span></div>
+      </div>
+    </div>
+    <div class="card f fc" style="background:#FFFBEB;border:1.5px solid rgba(245,158,11,.2)">
+      <div style="font-size:12px;font-weight:700;color:#F59E0B;margin-bottom:8px">Infrastructure Economics</div>
+      <div style="flex:1;display:flex;flex-direction:column;gap:8px;font-size:13px;color:#475569">
+        <div style="display:flex;align-items:flex-start;gap:8px"><span style="color:#F59E0B;flex-shrink:0">→</span><span>Lower queries per GPU forces overprovisioning</span></div>
+        <div style="display:flex;align-items:flex-start;gap:8px"><span style="color:#F59E0B;flex-shrink:0">→</span><span>More hardware needed just to meet peak demand</span></div>
+        <div style="display:flex;align-items:flex-start;gap:8px"><span style="color:#F59E0B;flex-shrink:0">→</span><span>Modelled at 1K GPUs: ~$1.72M/mo in idle compute if 60% is retrieval-bound</span></div>
+      </div>
+      <div style="margin-top:10px;padding:8px 12px;background:#fff;border-radius:8px;border:1px solid rgba(245,158,11,.2)">
+        <div style="font-size:10px;color:#94a3b8;margin-bottom:4px">Modelled projection — not measured directly</div>
+        <div style="font-size:11px;color:#64748b">Real savings depend on workload, utilization, and batching strategy</div>
+      </div>
+    </div>
+    <div class="card f fc" style="background:#EFF6FF;border:1.5px solid rgba(59,130,246,.2)">
+      <div style="font-size:12px;font-weight:700;color:#3B82F6;margin-bottom:8px">Scalability</div>
+      <div style="flex:1;display:flex;flex-direction:column;gap:8px;font-size:13px;color:#475569">
+        <div style="display:flex;align-items:flex-start;gap:8px"><span style="color:#3B82F6;flex-shrink:0">→</span><span>DDN Infinia held ~6ms at 50 concurrent readers</span></div>
+        <div style="display:flex;align-items:flex-start;gap:8px"><span style="color:#3B82F6;flex-shrink:0">→</span><span>S3 reached 706ms at same load — and degrades further</span></div>
+        <div style="display:flex;align-items:flex-start;gap:8px"><span style="color:#3B82F6;flex-shrink:0">→</span><span>Latency stability under concurrency is the key variable at scale</span></div>
+      </div>
+      <div style="margin-top:10px;padding:8px 12px;background:#fff;border-radius:8px;border:1px solid rgba(59,130,246,.15)">
+        <div style="font-size:11px;color:#64748b">Production performance depends on query distribution, cache, prompt length, batching</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ S7 Close ═══ -->
+<div class="slide" id="s7" style="background:#fff">
+  <div class="dpanel">
+    <div>
+      <div style="display:flex;gap:6px;align-items:center;margin-bottom:24px">
+        <div style="width:8px;height:8px;border-radius:50%;background:#ED2738"></div>
+        <div style="width:8px;height:8px;border-radius:50%;background:#76B900"></div>
+        <span style="color:rgba(255,255,255,.3);font-size:10px;margin-left:6px;letter-spacing:.08em">GTC 2026</span>
+      </div>
+      <p style="color:rgba(255,255,255,.55);font-size:17px;font-weight:300;line-height:1.7;margin-bottom:12px">RAG systems are often presented as a model problem.</p>
+      <p style="color:rgba(255,255,255,.85);font-size:17px;font-weight:500;line-height:1.7;margin-bottom:18px">In reality they are a data architecture problem as well.</p>
+      <div style="height:1px;background:rgba(255,255,255,.1);margin-bottom:18px"></div>
+      <p style="color:#F59E0B;font-size:18px;font-weight:700;line-height:1.5">Optimising the data layer allows the GPUs you already own to deliver more useful work.</p>
+      <div style="margin-top:20px;padding:12px;background:rgba(255,255,255,.05);border-radius:10px;border:1px solid rgba(255,255,255,.1)">
+        <div style="font-size:9px;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px">Measured · this session</div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <div style="display:flex;justify-content:space-between"><span style="font-size:11px;color:rgba(255,255,255,.35)">DDN read</span><span style="font-size:12px;font-weight:700;color:#76B900">~14ms</span></div>
+          <div style="display:flex;justify-content:space-between"><span style="font-size:11px;color:rgba(255,255,255,.35)">S3 read</span><span style="font-size:12px;font-weight:700;color:#ED2738">~239ms</span></div>
+          <div style="display:flex;justify-content:space-between"><span style="font-size:11px;color:rgba(255,255,255,.35)">DDN at 50 users</span><span style="font-size:12px;font-weight:700;color:#76B900">~6ms stable</span></div>
+          <div style="display:flex;justify-content:space-between"><span style="font-size:11px;color:rgba(255,255,255,.35)">S3 at 50 users</span><span style="font-size:12px;font-weight:700;color:#ED2738">706ms peak</span></div>
+        </div>
+      </div>
+    </div>
+    <div style="font-size:11px;color:rgba(255,255,255,.25);line-height:1.8">● Build.DDN.com/RAG<br>● PoC discussions on request<br>● Live benchmark reproducible</div>
+  </div>
+  <div style="flex:1;display:flex;flex-direction:column;justify-content:center;padding:56px">
+    <div style="margin-bottom:8px;display:flex;align-items:center;gap:10px">
+      <span class="eyebrow">Final Takeaway</span>
+      <span class="clock">~1 min</span>
+    </div>
+    <h1 style="font-size:50px;font-weight:900;line-height:1.15;color:#0f172a;margin-bottom:18px">Retrieval Happens<br>at Inference Time.<br><em style="color:#ED2738">Storage Is on the<br>Critical Path.</em></h1>
+    <p style="font-size:14px;color:#64748b;line-height:1.7;max-width:420px;margin-bottom:24px">Every millisecond added to retrieval increases overall response time — and reduces how many requests each GPU can serve within the same latency target.</p>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;max-width:380px">
+      <div style="text-align:center;padding:14px;background:#f8fafc;border-radius:12px;border:1px solid #e2e8f0">
+        <div style="font-size:24px;font-weight:900;color:#76B900">~14ms</div>
+        <div style="font-size:10px;color:#94a3b8;margin-top:3px">DDN read</div>
+      </div>
+      <div style="text-align:center;padding:14px;background:#f8fafc;border-radius:12px;border:1px solid #e2e8f0">
+        <div style="font-size:24px;font-weight:900;color:#3B82F6">4.6ms</div>
+        <div style="font-size:10px;color:#94a3b8;margin-top:3px">DDN TTFB</div>
+      </div>
+      <div style="text-align:center;padding:14px;background:#f8fafc;border-radius:12px;border:1px solid #e2e8f0">
+        <div style="font-size:24px;font-weight:900;color:#ED2738">6ms</div>
+        <div style="font-size:10px;color:#94a3b8;margin-top:3px">at 50 concurrent</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /stage -->
+<button id="prev" onclick="navigate(-1)">‹</button>
+<button id="next" onclick="navigate(1)">›</button>
+<div id="hint">← → Arrow keys &nbsp;·&nbsp; F = Fullscreen &nbsp;·&nbsp; ESC = Exit</div>
+
+<script>
+function applyZoom(){
+  // Reference 1080×640 (was 1280×760) + max 2.5 (was 2.0) — scales ~19% larger on theatre displays
+  const z=Math.min(2.5,Math.max(0.65,Math.min(window.innerWidth/1080,window.innerHeight/640)));
+  document.documentElement.style.zoom=z;
+  document.body.style.width=(100/z)+'vw';
+  document.body.style.height=(100/z)+'vh';
+}
+applyZoom();
+window.addEventListener('resize',applyZoom);
+
+const slides=document.querySelectorAll('.slide');
+const titles=['Cover','The Bottleneck','Benchmark Results','Concurrent Load','▶ Live Demo','What This Means','Final Takeaway'];
+const timings=['~1 min','~2 min','~2 min','~2 min','3–4 min','~2 min','~1 min'];
+let cur=0;
+let demoStep=0; // 0=idle  1=indexing playing  2=search playing
+
+const dotsEl=document.getElementById('dots');
+titles.forEach((t,i)=>{
+  const b=document.createElement('button');
+  b.title=t+' ('+timings[i]+')';
+  b.onclick=()=>goTo(i);
+  dotsEl.appendChild(b);
+});
+
+/* ── Demo helpers ─────────────────────────────────────────── */
+function resetDemo(){
+  demoStep=0;
+  ['v1','v2'].forEach(id=>{const v=document.getElementById(id);if(v){v.pause();v.currentTime=0;}});
+  ['v1-overlay','v2-overlay'].forEach(id=>{const o=document.getElementById(id);if(o){o.style.opacity='1';o.style.display='flex';}});
+  const c1=document.getElementById('ctrl1');const c2=document.getElementById('ctrl2');
+  if(c1)c1.style.display='none'; if(c2)c2.style.display='none';
+  const vc1=document.getElementById('vc1');const vc2=document.getElementById('vc2');
+  if(vc1){vc1.style.borderColor='rgba(118,185,0,.45)';vc1.style.boxShadow='none';}
+  if(vc2){vc2.style.opacity='.5';vc2.style.borderColor='rgba(59,130,246,.25)';vc2.style.boxShadow='none';}
+  const b1=document.getElementById('v1-badge');const b2=document.getElementById('v2-badge');
+  if(b1)b1.textContent='STEP 1'; if(b2)b2.textContent='STEP 2';
+  const hint=document.getElementById('demo-hint');
+  if(hint)hint.textContent='▶ Press Space or → to start Demo 1';
+  const s1=document.getElementById('seek1');const s2=document.getElementById('seek2');
+  const t1=document.getElementById('ts1'); const t2=document.getElementById('ts2');
+  if(s1)s1.value=0; if(t1)t1.textContent='0:00';
+  if(s2)s2.value=0; if(t2)t2.textContent='0:00';
+}
+
+function startDemo1(){
+  const v1=document.getElementById('v1');
+  const o1=document.getElementById('v1-overlay');
+  const c1=document.getElementById('ctrl1');
+  const seek1=document.getElementById('seek1');const ts1=document.getElementById('ts1');
+  o1.style.opacity='0'; setTimeout(()=>o1.style.display='none',400);
+  c1.style.display='flex';
+  document.getElementById('vc1').style.borderColor='#76B900';
+  document.getElementById('vc1').style.boxShadow='0 0 0 3px rgba(118,185,0,.2)';
+  document.getElementById('v1-badge').textContent='▶ PLAYING';
+  const hint=document.getElementById('demo-hint');
+  if(hint)hint.textContent='▶ Press Space or → to launch Demo 2';
+  v1.onloadedmetadata=()=>{seek1.max=v1.duration;};
+  v1.ontimeupdate=()=>{seek1.value=v1.currentTime;ts1.textContent=fmt(v1.currentTime)+'/'+fmt(v1.duration||0);};
+  v1.onended=()=>{document.getElementById('pb1').textContent='▶ Replay';document.getElementById('v1-badge').textContent='✓ DONE';};
+  v1.play().catch(()=>{});
+}
+
+function startDemo2(){
+  const v1=document.getElementById('v1');const v2=document.getElementById('v2');
+  const o2=document.getElementById('v2-overlay');const c2=document.getElementById('ctrl2');
+  const seek2=document.getElementById('seek2');const ts2=document.getElementById('ts2');
+  // Pause demo 1
+  v1.pause();
+  const b1=document.getElementById('v1-badge');
+  if(b1&&b1.textContent==='▶ PLAYING')b1.textContent='⏸ PAUSED';
+  document.getElementById('vc1').style.boxShadow='none';
+  // Activate demo 2
+  document.getElementById('vc2').style.opacity='1';
+  document.getElementById('vc2').style.borderColor='#3B82F6';
+  document.getElementById('vc2').style.boxShadow='0 0 0 3px rgba(59,130,246,.2)';
+  o2.style.opacity='0'; setTimeout(()=>o2.style.display='none',400);
+  c2.style.display='flex';
+  document.getElementById('v2-badge').textContent='▶ PLAYING';
+  const hint=document.getElementById('demo-hint');
+  if(hint)hint.textContent='▶ Press Space or → to continue to next slide';
+  v2.onloadedmetadata=()=>{seek2.max=v2.duration;};
+  v2.ontimeupdate=()=>{seek2.value=v2.currentTime;ts2.textContent=fmt(v2.currentTime)+'/'+fmt(v2.duration||0);};
+  v2.onended=()=>{document.getElementById('pb2').textContent='▶ Replay';document.getElementById('v2-badge').textContent='✓ DONE';};
+  v2.play().catch(()=>{});
+}
+
+function demoAdvance(){
+  if(demoStep===0){startDemo1();demoStep=1;}
+  else if(demoStep===1){startDemo2();demoStep=2;}
+  else{demoStep=0;navigate(1);}
+}
+
+/* ── Click on slide 5 body (not controls) to advance demo ── */
+document.getElementById('s5').addEventListener('click',function(e){
+  if(e.target.closest('button,input'))return;
+  if(cur===4)demoAdvance();
+});
+
+/* ── Navigation ───────────────────────────────────────────── */
+function goTo(n){
+  if(cur===4){
+    // Pause both videos when leaving slide 5
+    const v1=document.getElementById('v1');const v2=document.getElementById('v2');
+    if(v1&&!v1.paused)v1.pause();
+    if(v2&&!v2.paused)v2.pause();
+    if(n!==4)resetDemo();
+  }
+  slides[cur].classList.remove('active');
+  cur=Math.max(0,Math.min(n,slides.length-1));
+  slides[cur].classList.add('active');
+  dotsEl.querySelectorAll('button').forEach((b,i)=>b.classList.toggle('active',i===cur));
+  document.getElementById('stitle').textContent=titles[cur]+' · '+timings[cur];
+  document.getElementById('counter').textContent=(cur+1)+' / '+slides.length;
+  document.getElementById('progress-bar').style.width=((cur+1)/slides.length*100)+'%';
+  document.getElementById('prev').style.opacity=cur===0?'0.3':'1';
+  document.getElementById('next').style.opacity=cur===slides.length-1?'0.3':'1';
+}
+function navigate(d){goTo(cur+d);}
+
+document.addEventListener('keydown',e=>{
+  if(e.key==='ArrowRight'||e.key==='ArrowDown'||e.key===' '){
+    e.preventDefault();
+    if(cur===4){demoAdvance();}else{navigate(1);}
+  }
+  if(e.key==='ArrowLeft'||e.key==='ArrowUp'){e.preventDefault();navigate(-1);}
+  if(e.key==='f'||e.key==='F')toggleFS();
+  if(e.key==='Escape')document.exitFullscreen&&document.exitFullscreen();
+});
+
+let sx=0;
+document.getElementById('stage').addEventListener('touchstart',e=>sx=e.touches[0].clientX,{passive:true});
+document.getElementById('stage').addEventListener('touchend',e=>{const dx=e.changedTouches[0].clientX-sx;if(Math.abs(dx)>50)navigate(dx<0?1:-1);});
+function toggleFS(){
+  if(!document.fullscreenElement)document.documentElement.requestFullscreen&&document.documentElement.requestFullscreen();
+  else document.exitFullscreen&&document.exitFullscreen();
+}
+document.getElementById('btn-fs').onclick=toggleFS;
+setTimeout(()=>{const h=document.getElementById('hint');if(h){h.style.transition='opacity 1s';h.style.opacity='0';setTimeout(()=>h.remove(),1000);}},4000);
+function fmt(s){const m=Math.floor(s/60);return m+':'+(Math.floor(s%60)+'').padStart(2,'0');}
+function togglePlay(vid,pbId){
+  const v=document.getElementById(vid);const pb=document.getElementById(pbId);
+  if(v.paused){v.play().catch(()=>{});pb.textContent='⏸ Pause';}else{v.pause();pb.textContent='▶ Play';}
+}
+goTo(0);
+</script>
+</body>
+</html>

@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Clear RAG Chat Settings</title>
+    <style>
+        body {
+            font-family: system-ui;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        button {
+            padding: 12px 24px;
+            font-size: 16px;
+            background: #dc2626;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 10px 5px;
+        }
+        button:hover { background: #b91c1c; }
+        .success { color: #16a34a; font-weight: bold; margin-top: 20px; }
+        .info { background: #f3f4f6; padding: 15px; border-radius: 8px; margin: 20px 0; }
+        pre { background: #1f2937; color: #f3f4f6; padding: 10px; border-radius: 4px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Clear RAG Chat localStorage</h1>
+    
+    <div class="info">
+        <strong>Current Settings:</strong>
+        <pre id="current">Loading...</pre>
+    </div>
+    
+    <button onclick="clearSettings()">Clear All RAG Settings</button>
+    <button onclick="disableSlowFeatures()">Disable Reranking & Guardrails Only</button>
+    <button onclick="location.reload()">Refresh to See Changes</button>
+    
+    <div id="result"></div>
+    
+    <div class="info" style="margin-top: 30px;">
+        <h3>Instructions:</h3>
+        <ol>
+            <li>Click "Disable Reranking & Guardrails Only" to turn off slow features</li>
+            <li>Go to <a href="http://localhost:5173" target="_blank">http://localhost:5173</a></li>
+            <li>Hard refresh (<code>Cmd+Shift+R</code> or <code>Ctrl+Shift+R</code>)</li>
+            <li>Check that both green indicators are OFF</li>
+            <li>Submit a query - should be 5-15 seconds</li>
+        </ol>
+    </div>
+    
+    <script>
+        function showCurrent() {
+            const settings = {
+                reranking: localStorage.getItem('rag_chat_useReranking'),
+                guardrails: localStorage.getItem('rag_chat_useGuardrails'),
+                model: localStorage.getItem('rag_chat_model')
+            };
+            document.getElementById('current').textContent = JSON.stringify(settings, null, 2);
+        }
+        
+        function clearSettings() {
+            const keys = Object.keys(localStorage).filter(k => k.startsWith('rag_chat'));
+            keys.forEach(k => localStorage.removeItem(k));
+            document.getElementById('result').innerHTML = `<div class="success">✓ Cleared ${keys.length} settings</div>`;
+            showCurrent();
+        }
+        
+        function disableSlowFeatures() {
+            localStorage.setItem('rag_chat_useReranking', 'false');
+            localStorage.setItem('rag_chat_useGuardrails', 'false');
+            document.getElementById('result').innerHTML = `<div class="success">✓ Disabled reranking and guardrails</div>`;
+            showCurrent();
+        }
+        
+        showCurrent();
+    </script>
+</body>
+</html>

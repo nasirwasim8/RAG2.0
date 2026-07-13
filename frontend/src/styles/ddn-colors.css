@@ -1,0 +1,373 @@
+:root {
+    /* --- BASE TEXT COLORS --- */
+    --text-dark: #201E1E;
+    --text-light: #FFFFFF;
+
+    /* --- BRAND --- */
+    --brand-50: #FF1F12;
+    /* Text: Dark */
+    --brand-100: #FFE0E3;
+    /* Text: Dark */
+    --brand-200: #FFC6CB;
+    /* Text: Dark */
+    --brand-300: #FF9EA6;
+    /* Text: Dark */
+    --brand-400: #FF6572;
+    /* Text: Dark */
+    --brand-500: #FE3546;
+    /* Text: Light */
+    --brand-600: #ED2738;
+    /* Text: Light */
+    --brand-700: #C60F1F;
+    /* Text: Light */
+    --brand-800: #A4101D;
+    /* Text: Light */
+    --brand-900: #87151F;
+    /* Text: Light */
+
+    /* --- SECONDARY: DEEP RED --- */
+    --deep-red-50: #FDF5F3;
+    /* Text: Dark */
+    --deep-red-100: #FCE9E7;
+    /* Text: Dark */
+    --deep-red-200: #F8D5D3;
+    /* Text: Dark */
+    --deep-red-300: #F3B1AE;
+    /* Text: Dark */
+    --deep-red-400: #EB8481;
+    /* Text: Light */
+    --deep-red-500: #DF5454;
+    /* Text: Light */
+    --deep-red-600: #CB343B;
+    /* Text: Light */
+    --deep-red-700: #AA262F;
+    /* Text: Light */
+    --deep-red-800: #8F222D;
+    /* Text: Light */
+    --deep-red-900: #7A212D;
+    /* Text: Light */
+    --deep-red-1000: #440D13;
+    /* Text: Light */
+
+    /* --- SECONDARY: WINE --- */
+    --wine-50: #FCF4F4;
+    /* Text: Dark */
+    --wine-100: #F9EAEA;
+    /* Text: Dark */
+    --wine-200: #F4D7DA;
+    /* Text: Dark */
+    --wine-300: #EBB6BA;
+    /* Text: Dark */
+    --wine-400: #DF8D95;
+    /* Text: Light */
+    --wine-500: #CF6470;
+    /* Text: Light */
+    --wine-600: #B94559;
+    /* Text: Light */
+    --wine-700: #9B3549;
+    /* Text: Light */
+    --wine-800: #7D2D3F;
+    /* Text: Light */
+    --wine-900: #702B3C;
+    /* Text: Light */
+    --wine-1000: #3D141D;
+    /* Text: Light */
+
+    /* --- SECONDARY: TERRA --- */
+    --terra-50: #FCF5F4;
+    /* Text: Dark */
+    --terra-100: #F9EAE7;
+    /* Text: Dark */
+    --terra-200: #F4D9D4;
+    /* Text: Dark */
+    --terra-300: #EBBFB8;
+    /* Text: Dark */
+    --terra-400: #D98B7B;
+    /* Text: Dark */
+    --terra-500: #CE7665;
+    /* Text: Light */
+    --terra-600: #B95B49;
+    /* Text: Light */
+    --terra-700: #9B4A3A;
+    /* Text: Light */
+    --terra-800: #814033;
+    /* Text: Light */
+    --terra-900: #6C3A30;
+    /* Text: Light */
+    --terra-1000: #3A1B15;
+    /* Text: Light */
+
+    /* --- SECONDARY: ORANGE --- */
+    --orange-50: #FFF9EC;
+    /* Text: Dark */
+    --orange-100: #FFF2D3;
+    /* Text: Dark */
+    --orange-200: #FFE2A5;
+    /* Text: Dark */
+    --orange-300: #FFC66D;
+    /* Text: Dark */
+    --orange-400: #FFAA32;
+    /* Text: Dark */
+    --orange-500: #FF8E0A;
+    /* Text: Dark */
+    --orange-600: #FF7600;
+    /* Text: Light */
+    --orange-700: #CC5502;
+    /* Text: Light */
+    --orange-800: #A1420B;
+    /* Text: Light */
+    --orange-900: #82380C;
+    /* Text: Light */
+    --orange-1000: #461A04;
+    /* Text: Light */
+
+    /* --- NEUTRALS (DDN BLACK) --- */
+    --neutral-0: #FFFFFF;
+    /* Text: Dark */
+    --neutral-25: #F5F6F8;
+    /* Text: Dark */
+    --neutral-50: #F8F7F7;
+    /* Text: Dark */
+    --neutral-100: #F0EEEE;
+    /* Text: Dark */
+    --neutral-200: #DDDADA;
+    /* Text: Dark */
+    --neutral-300: #B7BABA;
+    /* Text: Dark */
+    --neutral-400: #9C9A94;
+    /* Text: Light */
+    --neutral-500: #807778;
+    /* Text: Light */
+    --neutral-600: #686162;
+    /* Text: Light */
+    --neutral-700: #494343;
+    /* Text: Light */
+    --neutral-800: #3F3B3C;
+    /* Text: Light */
+    --neutral-900: #201E1E;
+    /* Text: Light */
+    --neutral-1000: #000000;
+    /* Text: Light */
+
+    /* --- WARM BLACK --- */
+    --warm-black-50: #FBF5F5;
+    /* Text: Dark */
+    --warm-black-100: #F6EAEB;
+    /* Text: Dark */
+    --warm-black-200: #F0D8D9;
+    /* Text: Dark */
+    --warm-black-300: #E4BDBF;
+    /* Text: Dark */
+    --warm-black-400: #D3969A;
+    /* Text: Dark */
+    --warm-black-500: #C07378;
+    /* Text: Light */
+    --warm-black-600: #AA5B5D;
+    /* Text: Light */
+    --warm-black-700: #8E474B;
+    /* Text: Light */
+    --warm-black-800: #763E42;
+    /* Text: Light */
+    --warm-black-900: #64383B;
+    /* Text: Light */
+    --warm-black-1000: #402022;
+    /* Text: Light */
+
+    /* --- BROWN --- */
+    --brown-50: #FAF7F6;
+    /* Text: Dark */
+    --brown-100: #F6EEED;
+    /* Text: Dark */
+    --brown-200: #EDDFDE;
+    /* Text: Dark */
+    --brown-300: #DEC5C3;
+    /* Text: Dark */
+    --brown-400: #CBA3A1;
+    /* Text: Dark */
+    --brown-500: #B57E7E;
+    /* Text: Light */
+    --brown-600: #9C6263;
+    /* Text: Light */
+    --brown-700: #824E51;
+    /* Text: Light */
+    --brown-800: #77494D;
+    /* Text: Light */
+    --brown-900: #5F3C40;
+    /* Text: Light */
+    --brown-1000: #331E20;
+    /* Text: Light */
+
+    /* --- WARM GRAY --- */
+    --warm-gray-50: #F7F6F5;
+    /* Text: Dark */
+    --warm-gray-100: #EDEAE7;
+    /* Text: Dark */
+    --warm-gray-200: #D8D2CB;
+    /* Text: Dark */
+    --warm-gray-300: #C3B9AE;
+    /* Text: Dark */
+    --warm-gray-400: #A99A8E;
+    /* Text: Dark */
+    --warm-gray-500: #9B8577;
+    /* Text: Light */
+    --warm-gray-600: #8B766B;
+    /* Text: Light */
+    --warm-gray-700: #74615A;
+    /* Text: Light */
+    --warm-gray-800: #60514C;
+    /* Text: Light */
+    --warm-gray-900: #4F433F;
+    /* Text: Light */
+    --warm-gray-1000: #2F2321;
+    /* Text: Light */
+
+    /* --- COOL GRAY --- */
+    --cool-gray-50: #F8F8F8;
+    /* Text: Dark */
+    --cool-gray-100: #F0F0F0;
+    /* Text: Dark */
+    --cool-gray-200: #E9E8E8;
+    /* Text: Dark */
+    --cool-gray-300: #D2CFCF;
+    /* Text: Dark */
+    --cool-gray-400: #B8B3B3;
+    /* Text: Dark */
+    --cool-gray-500: #9B9B9B;
+    /* Text: Light */
+    --cool-gray-600: #837F7F;
+    /* Text: Light */
+    --cool-gray-700: #6C6969;
+    /* Text: Light */
+    --cool-gray-800: #5B5959;
+    /* Text: Light */
+    --cool-gray-900: #4F4D4D;
+    /* Text: Light */
+    --cool-gray-1000: #2B2727;
+    /* Text: Light */
+
+    /* --- DEEP BLUE --- */
+    --deep-blue-50: #F5F7FA;
+    /* Text: Dark */
+    --deep-blue-100: #EAEDF4;
+    /* Text: Dark */
+    --deep-blue-200: #D1D9E6;
+    /* Text: Dark */
+    --deep-blue-300: #A8B9D1;
+    /* Text: Dark */
+    --deep-blue-400: #7A9AB6;
+    /* Text: Dark */
+    --deep-blue-500: #59769E;
+    /* Text: Light */
+    --deep-blue-600: #455D84;
+    /* Text: Light */
+    --deep-blue-700: #374967;
+    /* Text: Light */
+    --deep-blue-800: #32415A;
+    /* Text: Light */
+    --deep-blue-900: #2E3B4C;
+    /* Text: Light */
+    --deep-blue-1000: #1E2533;
+    /* Text: Light */
+
+    /* --- STEEL BLUE --- */
+    --steel-blue-50: #F3F9FA;
+    /* Text: Dark */
+    --steel-blue-100: #EAF2F5;
+    /* Text: Dark */
+    --steel-blue-200: #DBEBEB;
+    /* Text: Dark */
+    --steel-blue-300: #C0D9E1;
+    /* Text: Dark */
+    --steel-blue-400: #A6C3D3;
+    /* Text: Dark */
+    --steel-blue-500: #8FAEC5;
+    /* Text: Light */
+    --steel-blue-600: #7594B2;
+    /* Text: Light */
+    --steel-blue-700: #56809C;
+    /* Text: Light */
+    --steel-blue-800: #546A7F;
+    /* Text: Light */
+    --steel-blue-900: #4B5967;
+    /* Text: Light */
+    --steel-blue-1000: #2A333C;
+    /* Text: Light */
+
+    /* --- BLUE --- */
+    --blue-50: #F2F9FD;
+    /* Text: Dark */
+    --blue-100: #E4F2FA;
+    /* Text: Dark */
+    --blue-200: #C2E5F5;
+    /* Text: Dark */
+    --blue-300: #70C5EB;
+    /* Text: Dark */
+    --blue-400: #4FB9E1;
+    /* Text: Dark */
+    --blue-500: #29ADCE;
+    /* Text: Light */
+    --blue-600: #1A81AF;
+    /* Text: Light */
+    --blue-700: #16678E;
+    /* Text: Light */
+    --blue-800: #165776;
+    /* Text: Light */
+    --blue-900: #184962;
+    /* Text: Light */
+    --blue-1000: #102F41;
+    /* Text: Light */
+
+    /* --- LIGHT BLUE --- */
+    --light-blue-50: #F4F8FB;
+    /* Text: Dark */
+    --light-blue-100: #EBEFF6;
+    /* Text: Dark */
+    --light-blue-200: #BDD6E7;
+    /* Text: Dark */
+    --light-blue-300: #9DC4DC;
+    /* Text: Dark */
+    --light-blue-400: #69A4C7;
+    /* Text: Dark */
+    --light-blue-500: #4589B2;
+    /* Text: Light */
+    --light-blue-600: #346E95;
+    /* Text: Light */
+    --light-blue-700: #2B5879;
+    /* Text: Light */
+    --light-blue-800: #274B65;
+    /* Text: Light */
+    --light-blue-900: #254055;
+    /* Text: Light */
+    --light-blue-1000: #1B2A39;
+    /* Text: Light */
+
+    /* --- STATUS --- */
+    --status-success: #00C280;
+    /* Text: Dark */
+    --status-success-subtle: #EAFFF5;
+    /* Text: Dark */
+    --status-error: #ED2738;
+    /* Text: Light */
+    --status-error-subtle: #FFE0E3;
+    /* Text: Dark */
+    --status-warning-1: #FEC600;
+    /* Text: Dark */
+    --status-warning-1-subtle: #FFFEE7;
+    /* Text: Dark */
+    --status-warning-2: #FF7600;
+    /* Text: Light */
+    --status-warning-2-subtle: #FFE2A5;
+    /* Text: Dark */
+    --status-informative: #1A81AF;
+    /* Text: Light */
+    --status-informative-subtle: #C2E5F5;
+    /* Text: Dark */
+
+    /* --- TRANSPARENT VARIANTS --- */
+    --dark-transparent-40: rgba(32, 30, 30, 0.40);
+    --dark-transparent-75: rgba(32, 30, 30, 0.75);
+    --dark-transparent-10: rgba(32, 30, 30, 0.10);
+    --light-transparent-40: rgba(255, 255, 255, 0.40);
+    --light-transparent-75: rgba(255, 255, 255, 0.75);
+    --light-transparent-10: rgba(255, 255, 255, 0.10);
+}
