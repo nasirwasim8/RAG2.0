@@ -321,12 +321,12 @@ export default function ChatPage() {
               onClick={handleColdStart}
               disabled={isColdStartLoading}
               className="flex items-center gap-1 px-2.5 py-1 bg-emerald-700 hover:bg-emerald-800 disabled:opacity-50 text-white rounded-md text-xs font-semibold transition-colors shadow-sm"
-              title="Simulate a server restart: clears in-memory FAISS then reloads everything from Infinia"
+              title="Cold start: clears in-memory FAISS then reloads everything from Infinia"
             >
               {isColdStartLoading ? (
                 <><Loader2 className="w-3 h-3 animate-spin" /> Loading from Infinia...</>
               ) : (
-                <><Zap className="w-3 h-3" /> Simulate Restart</>
+                <><Zap className="w-3 h-3" /> Cold Start</>
               )}
             </button>
             <div className="flex items-center gap-1 text-emerald-400">
