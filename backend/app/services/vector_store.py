@@ -12,6 +12,7 @@ os.environ['HF_HUB_OFFLINE'] = '1'
 os.environ['TRANSFORMERS_OFFLINE'] = '1'
 
 import time
+import json
 import pickle
 import hashlib
 import logging
@@ -30,6 +31,11 @@ from app.services.gpu_utils import gpu_info
 # Configure logger
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
+
+# S3 object keys for FAISS index persistence on Infinia
+FAISS_INDEX_KEY = "vectordb/faiss_index.bin"
+METADATA_KEY    = "vectordb/chunk_metadata.pkl"
+COUNTER_KEY     = "vectordb/chunk_counter.pkl"
 
 
 class VectorStore:
@@ -90,6 +96,10 @@ class VectorStore:
         # acquires it again in the same thread without deadlock.
         # Cross-thread callers (bucket monitor) must wait for the lock.
         self._add_lock = threading.RLock()
+
+        # Auto-restore persisted FAISS index from Infinia on startup
+        # This means backend restarts never require re-indexing
+        self.load_index_from_infinia()
 
     def _generate_chunk_id(self, content: str) -> str:
         """Generate unique chunk ID based on content hash."""
@@ -181,7 +191,7 @@ class VectorStore:
             handler = self.storage_handlers[provider]
             t0 = time.perf_counter()
             try:
-                success, message = handler.upload_bytes(chunk_bytes, f"chunks/{chunk_id}.pkl")
+                success, message = handler.upload_bytes(chunk_bytes, f"chunks/{chunk_id}.json")
             except Exception as e:
                 success, message = False, str(e)
             latency_ms = (time.perf_counter() - t0) * 1000
@@ -208,12 +218,13 @@ class VectorStore:
             # Serialize only this batch (memory freed when batch_data goes out of scope)
             batch_data = []
             for i in range(batch_start, batch_end):
-                chunk_payload = pickle.dumps({
+                chunk_payload = json.dumps({
                     'content': chunks[i]['content'],
                     'embeddings': embeddings[i].tolist(),
                     'timestamp': datetime.now().isoformat(),
-                    'chunk_id': all_chunk_ids[i]
-                })
+                    'chunk_id': all_chunk_ids[i],
+                    'metadata': chunks[i].get('metadata', {})
+                }, ensure_ascii=False).encode('utf-8')
                 batch_data.append((all_chunk_ids[i], chunk_payload))
 
             # DDN: synchronous with bounded timeout ──────────────────────────────────
@@ -341,6 +352,10 @@ class VectorStore:
         logger.info(f"✅ Successfully added {results['stored_chunks']} chunks")
         logger.info(f"   Index size AFTER: {self.index.ntotal} chunks")
         logger.info(f"   Metadata entries: {len(self.chunk_metadata)}")
+
+        # Persist updated FAISS index + metadata to Infinia after every ingest
+        self.save_index_to_infinia()
+
         return results
 
 
@@ -353,8 +368,8 @@ class VectorStore:
             'chunk_id': chunk_id
         }
 
-        chunk_bytes = pickle.dumps(chunk_data)
-        object_key = f"chunks/{chunk_id}.pkl"
+        chunk_bytes = json.dumps(chunk_data, ensure_ascii=False).encode('utf-8')
+        object_key = f"chunks/{chunk_id}.json"
         bytes_size = len(chunk_bytes)
 
         results = {}
@@ -538,30 +553,40 @@ class VectorStore:
         }
 
     def _retrieve_from_provider_with_handler(self, chunk_id: str, handler: S3Handler) -> Tuple[Optional[Dict], bool]:
-        """Retrieve chunk from storage provider using provided handler."""
-        object_key = f"chunks/{chunk_id}.pkl"
-
-        chunk_bytes, message = handler.download_bytes(object_key)
-        if chunk_bytes:
-            try:
-                return pickle.loads(chunk_bytes), True
-            except Exception as e:
-                logger.error(f"Failed to unpickle chunk {chunk_id}: {e}")
-                return None, False
+        """Retrieve chunk from storage provider using provided handler.
+        Tries JSON format first (.json), falls back to legacy pickle (.pkl).
+        """
+        for ext, deserialize in [
+            ('.json', lambda b: json.loads(b.decode('utf-8'))),
+            ('.pkl',  lambda b: pickle.loads(b))
+        ]:
+            chunk_bytes, _ = handler.download_bytes(f"chunks/{chunk_id}{ext}")
+            if chunk_bytes:
+                try:
+                    return deserialize(chunk_bytes), True
+                except Exception as e:
+                    logger.error(f"Failed to deserialize chunk {chunk_id}{ext}: {e}")
         return None, False
 
     def _retrieve_from_provider(self, chunk_id: str, provider: str) -> Tuple[Optional[Dict], bool]:
-        """Retrieve chunk from specific storage provider."""
-        object_key = f"chunks/{chunk_id}.pkl"
+        """Retrieve chunk from specific storage provider.
+        Tries JSON format first (.json), falls back to legacy pickle (.pkl).
+        """
         handler = self.storage_handlers[provider]
-
         start_time = time.perf_counter()
-        chunk_bytes, message = handler.download_bytes(object_key)
+        chunk_bytes = None
+
+        # Try JSON format first (new), then legacy pickle (old)
+        for ext in ['.json', '.pkl']:
+            data, _ = handler.download_bytes(f"chunks/{chunk_id}{ext}")
+            if data:
+                chunk_bytes = data
+                break
+
         latency_ms = (time.perf_counter() - start_time) * 1000
-        
         success = chunk_bytes is not None
         bytes_size = len(chunk_bytes) if chunk_bytes else 0
-        
+
         # Track storage operation metrics
         if self.storage_ops_tracker:
             self.storage_ops_tracker.track_operation(
@@ -571,10 +596,13 @@ class VectorStore:
                 latency_ms=latency_ms,
                 success=success
             )
-        
+
         if chunk_bytes:
             try:
-                return pickle.loads(chunk_bytes), True
+                try:
+                    return json.loads(chunk_bytes.decode('utf-8')), True
+                except (json.JSONDecodeError, UnicodeDecodeError):
+                    return pickle.loads(chunk_bytes), True
             except Exception:
                 return None, False
         return None, False
@@ -611,6 +639,111 @@ class VectorStore:
                     'improvement_percent': 0
                 }
         return {}
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Infinia Persistence — FAISS index survives backend restarts
+    # ─────────────────────────────────────────────────────────────────────────
+
+    def save_index_to_infinia(self) -> bool:
+        """Persist FAISS index + chunk metadata to Infinia.
+
+        Called automatically after every ingest so the index is always durable.
+        Three objects are written to the 'vectordb/' prefix:
+          vectordb/faiss_index.bin    — binary FAISS index
+          vectordb/chunk_metadata.pkl — {int → metadata dict} mapping
+          vectordb/chunk_counter.pkl  — monotonic chunk counter
+
+        Returns True on success, False if an error occurred.
+        """
+        try:
+            handler = self.storage_handlers.get('ddn_infinia')
+            if not handler:
+                logger.warning("⚠️  No DDN INFINIA handler — skipping FAISS persistence")
+                return False
+
+            import tempfile
+
+            # 1. Write FAISS index to temp file → read bytes → upload to Infinia
+            with tempfile.NamedTemporaryFile(delete=False, suffix='.bin') as f:
+                tmp_path = f.name
+            faiss.write_index(self.index, tmp_path)
+            with open(tmp_path, 'rb') as fb:
+                index_bytes = fb.read()
+            os.unlink(tmp_path)
+
+            ok, msg = handler.upload_bytes(index_bytes, FAISS_INDEX_KEY)
+            if not ok:
+                logger.error(f"❌ Failed to persist FAISS index to Infinia: {msg}")
+                return False
+
+            # 2. Persist chunk metadata and counter
+            handler.upload_bytes(pickle.dumps(self.chunk_metadata), METADATA_KEY)
+            handler.upload_bytes(pickle.dumps(self.chunk_counter),  COUNTER_KEY)
+
+            index_mb = len(index_bytes) / (1024 * 1024)
+            logger.info(
+                f"💾 FAISS index persisted to Infinia — "
+                f"{self.index.ntotal} vectors | {index_mb:.1f} MB | "
+                f"{len(self.chunk_metadata)} metadata entries"
+            )
+            return True
+        except Exception as e:
+            logger.error(f"❌ Error persisting FAISS index to Infinia: {e}")
+            import traceback; traceback.print_exc()
+            return False
+
+    def load_index_from_infinia(self) -> bool:
+        """Restore FAISS index + metadata from Infinia on startup.
+
+        Called automatically in __init__ so the backend never needs to
+        re-index after a restart — vectors are loaded directly from
+        Infinia S3 in seconds.
+
+        Returns True if a persisted index was found and restored,
+        False if no index exists yet (first run).
+        """
+        try:
+            handler = self.storage_handlers.get('ddn_infinia')
+            if not handler:
+                return False
+
+            # 1. Fetch FAISS binary index from Infinia
+            index_bytes, _ = handler.download_bytes(FAISS_INDEX_KEY)
+            if not index_bytes:
+                logger.info("📭 No persisted FAISS index on Infinia — starting with empty index")
+                return False
+
+            import tempfile
+            with tempfile.NamedTemporaryFile(delete=False, suffix='.bin') as f:
+                f.write(index_bytes)
+                tmp_path = f.name
+            self.index = faiss.read_index(tmp_path)
+            os.unlink(tmp_path)
+
+            # 2. Restore chunk metadata
+            meta_bytes, _ = handler.download_bytes(METADATA_KEY)
+            if meta_bytes:
+                self.chunk_metadata = pickle.loads(meta_bytes)
+
+            # 3. Restore chunk counter
+            counter_bytes, _ = handler.download_bytes(COUNTER_KEY)
+            if counter_bytes:
+                self.chunk_counter = pickle.loads(counter_bytes)
+
+            logger.info(
+                f"✅ FAISS index restored from Infinia — "
+                f"{self.index.ntotal} vectors | {len(self.chunk_metadata)} chunks ready "
+                f"(no re-indexing needed)"
+            )
+            return True
+        except Exception as e:
+            logger.error(f"❌ Error loading FAISS index from Infinia: {e}")
+            import traceback; traceback.print_exc()
+            # Reset to a safe empty state on error
+            self.index = faiss.IndexFlatL2(self.embedding_dim)
+            self.chunk_metadata = {}
+            self.chunk_counter = 0
+            return False
 
 
     def clear(self):
