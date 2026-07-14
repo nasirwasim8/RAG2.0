@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Settings, FileText, Upload, MessageSquare, BarChart3, DollarSign } from 'lucide-react'
+import { Settings, FileText, Upload, MessageSquare, BarChart3, DollarSign, Shield } from 'lucide-react'
 
 interface Tab {
   id: string
@@ -20,6 +20,7 @@ const iconMap: Record<string, React.ReactNode> = {
   message: <MessageSquare className="w-5 h-5" />,
   chart: <BarChart3 className="w-5 h-5" />,
   dollar: <DollarSign className="w-5 h-5" />,
+  shield: <Shield className="w-5 h-5" />,
 }
 
 export default function DemoSidebar({ tabs, activeTab, onTabChange }: DemoSidebarProps) {

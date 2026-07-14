@@ -415,7 +415,8 @@ class VectorStore:
     def search_with_provider_comparison(
         self,
         query: str,
-        top_k: int = 5
+        top_k: int = 5,
+        user_role: str = "admin",
     ) -> Dict[str, Any]:
         """Search and retrieve from both providers, comparing performance."""
         logger.info(f"🔍 Searching for query: '{query[:50]}...'")
@@ -431,11 +432,21 @@ class VectorStore:
         query_np = np.array([query_embedding], dtype=np.float32)
         distances, indices = self.index.search(query_np, min(top_k, self.index.ntotal))
 
-        # Get chunk IDs to retrieve
+        # Get chunk IDs to retrieve (apply RBAC filter for standard users)
         chunk_ids = []
-        for idx in indices[0]:
+        rbac_allowed: List[Tuple[float, int]] = []  # (distance, faiss_idx) after RBAC
+        for dist, idx in zip(distances[0], indices[0]):
             if idx >= 0 and idx in self.chunk_metadata:
-                chunk_ids.append(self.chunk_metadata[idx]['chunk_id'])
+                meta = self.chunk_metadata[idx]
+                classification = meta.get('metadata', {}).get('classification', 'public')
+                if user_role == 'standard' and classification == 'confidential':
+                    logger.info(f"RBAC: standard user blocked from confidential chunk {meta['chunk_id']}")
+                    continue
+                chunk_ids.append(meta['chunk_id'])
+                rbac_allowed.append((dist, idx))
+        rbac_filtered_count = len([i for i in indices[0] if i >= 0]) - len(chunk_ids)
+        if rbac_filtered_count > 0:
+            logger.info(f"RBAC: {rbac_filtered_count} confidential chunk(s) filtered for role={user_role}")
 
         logger.info(f"📦 Found {len(chunk_ids)} chunk IDs from FAISS search")
 
@@ -520,8 +531,8 @@ class VectorStore:
         results = []
         if source_provider:
             chunks = provider_chunks[source_provider]
-            for i, (dist, idx) in enumerate(zip(distances[0], indices[0])):
-                if idx >= 0 and i < len(chunks):
+            for i, (dist, idx) in enumerate(rbac_allowed):
+                if i < len(chunks):
                     chunk = chunks[i]
                     meta = self.chunk_metadata.get(idx, {})
                     results.append({
@@ -532,21 +543,24 @@ class VectorStore:
                     })
                     logger.debug(f"   Retrieved chunk {idx}: distance={dist:.4f}, content_len={len(chunk['content'])}")
 
-        logger.info(f"✅ Search complete: Found {len(results)} relevant chunks")
+        logger.info(f"RBAC search complete: {len(results)} chunks returned (role={user_role}, filtered={rbac_filtered_count})")
         if results:
             logger.info(f"   Sample chunk preview: {results[0]['content'][:100]}...")
+        elif rbac_filtered_count > 0:
+            logger.warning(f"RBAC: all matching chunks were confidential, blocked for role={user_role}")
         else:
-            logger.warning("⚠️  No results returned!")
-        
+            logger.warning("No results returned from vector store")
+
         # Extract storage TTFB metrics (download time only)
         storage_ttfb = {provider: metrics['download_ms'] for provider, metrics in provider_times.items()}
-        
+
         return {
             'results': results,
-            'storage_ttfb': storage_ttfb,  # NEW: Pure download time
-            'provider_times': provider_times,  # Keep for backward compatibility
+            'storage_ttfb': storage_ttfb,
+            'provider_times': provider_times,
             'fastest_provider': fastest_provider,
-            'ttfb_improvement': self._calculate_improvement(storage_ttfb)
+            'ttfb_improvement': self._calculate_improvement(storage_ttfb),
+            'rbac_filtered': rbac_filtered_count,
         }
 
     def _retrieve_from_provider_with_handler(self, chunk_id: str, handler: S3Handler) -> Tuple[Optional[Dict], bool]:

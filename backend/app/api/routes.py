@@ -364,6 +364,14 @@ async def upload_document_tracked(file: UploadFile = File(...), enable_s3: bool 
 
     filename = file.filename
 
+    # Auto-detect classification from filename prefix (CONF_, CONFIDENTIAL_, [CONF] etc.)
+    # This lets demo organisers simply rename a file to mark it confidential — no UI needed.
+    _upper = filename.upper()
+    classification = "confidential" if any(
+        _upper.startswith(p) for p in ('CONF_', 'CONFIDENTIAL_', '[CONF]', '[CONFIDENTIAL]', 'INTERNAL_', 'SECRET_')
+    ) else "public"
+    logger.info(f"Document classification: {filename!r} -> {classification}")
+
     # Initialise progress record
     _upload_progress[upload_id] = {
         "status": "processing",
@@ -394,6 +402,10 @@ async def upload_document_tracked(file: UploadFile = File(...), enable_s3: bool 
                     tmp_path,
                     original_filename=filename,  # use real name, not temp path
                 )
+                # Stamp classification on every chunk so RBAC filtering works at query time
+                for chunk in chunks:
+                    chunk.setdefault('metadata', {})['classification'] = classification
+                    chunk.setdefault('metadata', {})['source'] = filename
                 _upload_progress[upload_id]["chunks_total"] = len(chunks)
 
                 def _cb(chunks_done, chunks_total, embeddings_per_sec, provider_write_stats):
@@ -735,7 +747,9 @@ async def stream_rag_response(req: StreamRAGRequest):
     query = req.query
     model = req.model
     top_k = req.top_k
-    conversation_history = req.conversation_history  # list of ConversationMessage
+    conversation_history = req.conversation_history
+    user_role = req.user_role  # RBAC: 'admin' | 'standard'
+
 
     async def _generate():
         import queue as _queue
@@ -745,12 +759,17 @@ async def stream_rag_response(req: StreamRAGRequest):
             # 1. Vector search (blocking → run in executor)
             loop = asyncio.get_event_loop()
             search_results = await loop.run_in_executor(
-                None, vector_store.search_with_provider_comparison, query, top_k
+                None, vector_store.search_with_provider_comparison, query, top_k, user_role
             )
 
+            rbac_filtered = search_results.get('rbac_filtered', 0)
             if not search_results["results"]:
-                yield 'event: error\ndata: {"message": "No documents found. Please upload documents first."}\n\n'
+                if rbac_filtered > 0:
+                    yield 'event: error\ndata: {"message": "[ACCESS_DENIED] This information is classified and not available at your access level. Contact your administrator to request elevated access."}\n\n'
+                else:
+                    yield 'event: error\ndata: {"message": "No documents found. Please upload documents first."}\n\n'
                 return
+
 
             # 2. Emit start event with storage TTFB data + full chunk info
             import json as _json

@@ -90,6 +90,10 @@ class StreamRAGRequest(BaseModel):
         default_factory=list,
         description="Rolling window of previous exchanges (last 3 exchanges = 6 messages max)"
     )
+    user_role: str = Field(
+        default="admin",
+        description="RBAC role: 'admin' sees all chunks, 'standard' sees only public chunks"
+    )
 
 
 class RetrievedChunk(BaseModel):

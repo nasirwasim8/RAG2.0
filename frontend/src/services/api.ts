@@ -358,6 +358,7 @@ export const api = {
     onDone: (totalTokens: number, elapsedMs: number, tps: number) => void,
     onError: (message: string) => void,
     conversationHistory: ConversationMessage[] = [],
+    userRole: string = 'admin',
   ): AbortController => {
     const ctrl = new AbortController()
     const url = `/api/rag/stream`
@@ -372,6 +373,7 @@ export const api = {
               model,
               top_k: topK,
               conversation_history: conversationHistory,
+              user_role: userRole,
             }),
             signal: ctrl.signal,
           })

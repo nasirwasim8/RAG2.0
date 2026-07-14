@@ -11,6 +11,7 @@ import MetricsPage from './pages/Metrics'
 import BusinessImpactPage from './pages/BusinessImpact'
 import AboutPage from './pages/About'
 import GTCDeckPage from './pages/GTCDeck'
+import RBACDemoPage from './pages/RBACDemo'
 
 // Top-level navigation
 const mainTabs = [
@@ -25,6 +26,7 @@ const demoTabs = [
   { id: 'ingestion', label: 'Ingestion', icon: 'upload' },
   { id: 'documents', label: 'Documents', icon: 'file' },
   { id: 'chat', label: 'RAG Chat', icon: 'message' },
+  { id: 'rbac', label: 'Access Control', icon: 'shield' },
   { id: 'dashboard', label: 'Dashboard', icon: 'chart' },
   { id: 'impact', label: 'ROI', icon: 'dollar' },
 ]
@@ -58,6 +60,8 @@ function App() {
         return <ContinuousIngestionPage />
       case 'chat':
         return <ChatPage />
+      case 'rbac':
+        return <RBACDemoPage />
       case 'dashboard':
         return <MetricsPage />
       case 'impact':
