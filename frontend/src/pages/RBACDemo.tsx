@@ -1,6 +1,6 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Loader2, Shield, User, Lock, Zap, Database, ChevronRight } from 'lucide-react'
+import { Loader2, Shield, User, Lock, Zap, Database, ChevronRight, RefreshCw, CheckCircle, FileText } from 'lucide-react'
 import { api } from '../services/api'
 import toast from 'react-hot-toast'
 
@@ -83,6 +83,31 @@ export default function RBACDemo() {
   const stdAbort = useRef<AbortController | null>(null)
   const execAbort = useRef<AbortController | null>(null)
 
+  // ── Doc list (plain fetch) ───────────────────────────────────────────────
+  const [docList, setDocList] = useState<{ documents: { filename: string; chunks: number }[] } | null>(null)
+
+  const fetchDocs = useCallback(() => {
+    fetch('/api/documents/list').then(r => r.json()).then(setDocList).catch(() => {})
+  }, [])
+
+  useEffect(() => { fetchDocs(); const t = setInterval(fetchDocs, 30_000); return () => clearInterval(t) }, [fetchDocs])
+
+  // ── Reclassify (plain fetch) ──────────────────────────────────────────
+  const [reclassifyState, setReclassifyState] = useState<'idle' | 'pending' | 'done'>('idle')
+
+  const handleReclassify = async () => {
+    setReclassifyState('pending')
+    try {
+      const data = await fetch('/api/documents/reclassify', { method: 'POST' }).then(r => r.json())
+      toast.success(`Reclassified ${data.chunks_updated} chunks — saved to Infinia`, { icon: '🔐' })
+      setReclassifyState('done')
+      fetchDocs()
+    } catch {
+      toast.error('Reclassify failed')
+      setReclassifyState('idle')
+    }
+  }
+
   const handleAsk = () => {
     if (!query.trim() || isQuerying) return
 
@@ -162,23 +187,63 @@ export default function RBACDemo() {
   return (
     <div className="flex flex-col gap-0 -mx-6 -my-8 min-h-[calc(100vh-var(--nav-height)-4rem)]">
 
-      {/* ── Explainer bar ─────────────────────────────────────────────────── */}
-      <div className="flex items-center flex-wrap gap-6 px-6 py-3 bg-slate-900/60 border-b border-white/5 text-xs text-slate-400">
+      {/* ── Setup / status bar ────────────────────────────────────────────── */}
+      <div className="px-6 py-3 bg-slate-900/80 border-b border-white/5 flex items-center gap-4 flex-wrap">
         <div className="flex items-center gap-2">
           <Shield className="w-3.5 h-3.5 text-emerald-400" />
-          <span className="font-semibold text-white">Infinia RBAC Demo</span>
-          <span className="text-slate-500">—</span>
-          <span>Same knowledge base. Metadata-filtered at query time.</span>
+          <span className="text-xs font-semibold text-white">Infinia RBAC Demo</span>
+          <span className="text-xs text-slate-500">— Metadata-filtered access control</span>
         </div>
-        <div className="flex items-center gap-4 ml-auto">
-          <div className="flex items-center gap-1.5">
-            <div className="w-2 h-2 rounded-full bg-blue-400" />
-            <span><span className="text-blue-300 font-medium">Alex</span> reads <code className="bg-slate-800 px-1 rounded text-blue-300">classification:public</code> only</span>
+
+        {/* Doc classification badges */}
+        {docList?.documents && docList.documents.length > 0 && (
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {docList.documents.map((doc: { filename: string; chunks: number }) => {
+              const upper = doc.filename.toUpperCase()
+              const isConf = ['CONF_', 'CONFIDENTIAL_', '[CONF]', '[CONFIDENTIAL]', 'INTERNAL_', 'SECRET_']
+                .some(p => upper.startsWith(p))
+              return (
+                <span key={doc.filename}
+                  className={`flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full border font-medium ${
+                    isConf
+                      ? 'bg-amber-900/30 border-amber-500/30 text-amber-400'
+                      : 'bg-blue-900/20 border-blue-500/20 text-blue-400'
+                  }`}
+                >
+                  {isConf ? <Lock className="w-2.5 h-2.5" /> : <FileText className="w-2.5 h-2.5" />}
+                  {doc.filename.length > 24 ? doc.filename.slice(0, 24) + '...' : doc.filename}
+                  <span className="opacity-60">{doc.chunks}c</span>
+                </span>
+              )
+            })}
           </div>
-          <ChevronRight className="w-3 h-3 text-slate-600" />
-          <div className="flex items-center gap-1.5">
-            <div className="w-2 h-2 rounded-full bg-amber-400" />
-            <span><span className="text-amber-300 font-medium">Sarah</span> reads <code className="bg-slate-800 px-1 rounded text-amber-300">all</code> chunks</span>
+        )}
+
+        <div className="ml-auto flex items-center gap-3">
+          {/* Reclassify button */}
+          <button
+            onClick={handleReclassify}
+            disabled={reclassifyState === 'pending'}
+            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-emerald-500/30 text-emerald-400 hover:bg-emerald-900/30 disabled:opacity-50 transition-colors"
+            title="Re-stamp classification on all existing chunks without re-uploading"
+          >
+            {reclassifyState === 'pending'
+              ? <Loader2 className="w-3 h-3 animate-spin" />
+              : reclassifyState === 'done'
+              ? <CheckCircle className="w-3 h-3" />
+              : <RefreshCw className="w-3 h-3" />}
+            {reclassifyState === 'pending' ? 'Reclassifying...' : 'Reclassify Docs'}
+          </button>
+          <div className="flex items-center gap-4 text-xs text-slate-400">
+            <div className="flex items-center gap-1.5">
+              <div className="w-2 h-2 rounded-full bg-blue-400" />
+              <span><span className="text-blue-300 font-medium">Alex</span> = public only</span>
+            </div>
+            <ChevronRight className="w-3 h-3 text-slate-600" />
+            <div className="flex items-center gap-1.5">
+              <div className="w-2 h-2 rounded-full bg-amber-400" />
+              <span><span className="text-amber-300 font-medium">Sarah</span> = all chunks</span>
+            </div>
           </div>
         </div>
       </div>

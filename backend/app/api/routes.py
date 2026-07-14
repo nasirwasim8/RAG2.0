@@ -300,6 +300,42 @@ async def clear_documents():
     return {"success": True, "message": "Vector store cleared"}
 
 
+_CONF_PREFIXES = ('CONF_', 'CONFIDENTIAL_', '[CONF]', '[CONFIDENTIAL]', 'INTERNAL_', 'SECRET_')
+
+@documents_router.post("/reclassify")
+async def reclassify_documents():
+    """Re-stamp classification on all existing in-memory chunks based on filename prefix.
+
+    Chunks whose source filename starts with CONF_, CONFIDENTIAL_, INTERNAL_, or SECRET_
+    are tagged classification=confidential. All others become public.
+    The updated metadata is persisted back to Infinia so it survives backend restarts.
+    No re-upload or re-indexing required.
+    """
+    updated = 0
+    breakdown: dict = {}
+
+    for _idx, meta in vector_store.chunk_metadata.items():
+        source = meta.get('metadata', {}).get('source', '')
+        upper = source.upper()
+        cls = 'confidential' if any(upper.startswith(p) for p in _CONF_PREFIXES) else 'public'
+        old_cls = meta.get('metadata', {}).get('classification', None)
+        meta.setdefault('metadata', {})['classification'] = cls
+        if old_cls != cls:
+            updated += 1
+        breakdown[source] = breakdown.get(source, cls)
+
+    # Persist updated metadata back to Infinia
+    saved = vector_store.save_index_to_infinia()
+
+    return {
+        "success": True,
+        "chunks_updated": updated,
+        "total_chunks": vector_store.total_chunks,
+        "persisted_to_infinia": saved,
+        "breakdown": breakdown,
+    }
+
+
 @documents_router.get("/list")
 async def list_documents():
     """Return the list of documents registered in this session."""
